@@ -138,5 +138,80 @@
     
   }
 
+  /* 일정 표시 바 */
+.event-bar {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    background: red;
+    bottom: 0;
+    left: 0;
+}
+
+/* 모달 스타일 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    width: 450px;
+}
+
+.datepicker-overlay{
+  width: 100%;
+}
+
+
+.selected-label {
+  font-size: 12px;
+  color: #666;
+}
+.selected-value {
+  font-size: 20px;
+  font-weight: bold;
+}
   
-  
+.selected-active {
+  color: #FB8501;
+}
+.selected-inactive {
+  color: #555;
+}
+.selected-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin: 10px 0;
+}
+.selected-active {
+  color: #FB8501;
+}
+.selected-inactive {
+  color: #555;
+}
+
+.selected-circle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #FB8501;
+  border-radius: 50%;
+  /* top: 50%; */
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 0;
+}

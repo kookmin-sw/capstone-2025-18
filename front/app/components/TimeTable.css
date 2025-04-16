@@ -1,0 +1,154 @@
+
+.timetable-container {
+  overflow: auto;
+  padding: 10px;
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.timetable-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 10px;
+  position: relative;
+}
+
+.timetable-display-date {
+  display: flex;
+  flex-direction: row;
+}
+
+.timetable-header h2 {
+  margin: 0;
+  font-size: 20px;
+  flex: 1;
+}
+
+.timetable-add-event-btn, .timetable-show-calendar {
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  /* font-weight: bold; */
+}
+
+.timetable-add-event-btn {
+  padding: 6px;
+  border: 1px solid #000;
+}
+
+.tag-filter-buttons {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tag-btn.selected {
+  outline: 2px solid #000;
+}
+
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-rows: auto;
+}
+
+.corner-cell {
+  /* background-color: #eee; */
+}
+
+.header-cell {
+  /* background-color: #f3f3f3; */
+  text-align: center;
+  padding: 8px 0;
+  font-weight: bold;
+  border: 1px solid #eee;
+  font-size: 13px;
+}
+
+.time-cell {
+  display: flex;
+  align-items: center;      
+  justify-content: flex-end; 
+  padding-right: 5px;       
+  font-size: 12px;
+  border: 1px solid #ddd;
+}
+
+.cell {
+  border: 1px solid #eee;
+  height: 40px;
+  position: relative;
+  cursor: pointer;
+}
+
+.cell.selected {
+  background-color: #d0e8ff;
+}
+
+.event-block {
+  position: absolute;
+  top: 0;
+  padding: 2px 4px;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 15px;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.header-date {
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.selected-date-circle {
+  border: 1.5px solid black;
+  background: white;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+}
+
+.header-day {
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.header-date {
+  font-size: 13px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timetable-saturday {
+  color: blue;
+}
+
+.timetable-sunday {
+  color: red;
+}

@@ -1,0 +1,75 @@
+
+.wheel-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 16px;
+  position: relative;
+}
+
+.wheel-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.wheel-column label {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.wheel-double {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.wheel-list {
+  width: 70px;
+  height: 120px;
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  background: #fff;
+  border-radius: 6px;
+  position: relative;
+}
+
+.wheel-list::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-list li {
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  color: #555;
+}
+
+.wheel-list li.selected {
+  font-weight: bold;
+  color: black;
+}
+
+.wheel-highlight {
+  position: absolute;
+  top: 40px; /* 3媛� 以� 媛��대뜲 �붿냼 �꾩튂 */
+  height: 40px;
+  width: calc(70px * 2 + 6px + 20px); /* 2 picker + gap + label */
+  background: rgba(200, 200, 200, 0.2); /* �고븳 �뚯깋 */
+  pointer-events: none;
+  z-index: 1;
+  left: 0;
+}
+
+.wheel-stack {
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}

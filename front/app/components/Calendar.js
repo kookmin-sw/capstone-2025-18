@@ -1,23 +1,27 @@
 'use client'
 import React, { useState, useEffect } from "react";
 import moment from "moment";
-import "./Calendar.css"; // 스타일 파일 가져오기
+import EventModal from "./EventModal"; // 일정 추가 모듈 불러오기
+import "./Calendar.css";
+import TimeScrollPicker from "./TimeScrollPicker";
 
 const Calendar = () => {
-  const [currentDate, setCurrentDate] = useState(moment()); // 현재 날짜 상태
+  const [currentDate, setCurrentDate] = useState(moment());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     generateCalendar();
-  }, [currentDate]);
+  }, [currentDate, events]);
 
   const generateCalendar = () => {
     const startOfMonth = currentDate.clone().startOf("month");
     const endOfMonth = currentDate.clone().endOf("month");
-    const startDay = startOfMonth.day(); // 이번 달 1일의 요일 (0 = 일요일)
-    const totalDays = endOfMonth.date(); // 이번 달 총 일 수
+    const startDay = startOfMonth.day();
+    const totalDays = endOfMonth.date();
 
     let days = [];
-    
     for (let i = 0; i < startDay; i++) {
       days.push("");
     }
@@ -35,6 +39,15 @@ const Calendar = () => {
     setCurrentDate(currentDate.clone().add(1, "month"));
   };
 
+  const handleDayClick = (day) => {
+    setSelectedDate(moment(currentDate).date(day));
+    setShowModal(true);
+  };
+
+  const handleSaveEvent = (event) => {
+    setEvents([...events, event]);
+  };
+
   return (
     <div className="calendar-container">
       <div className="calendar-header">
@@ -44,20 +57,35 @@ const Calendar = () => {
       </div>
       <div className="calendar-grid">
         {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
-          <div key={index} className={`day-name cat-icon`}>
+          <div key={index} className="day-name cat-icon">
             {day}
           </div>
         ))}
         {generateCalendar().map((day, index) => {
           const isToday = moment().isSame(currentDate.clone().date(day), "day");
+          const hasEvent = events.some(event =>
+            moment(event.start).date() <= day && moment(event.end).date() >= day
+          );
           return (
-            <div key={index} className={`day day-large ${day ? "active" : "empty"} ${isToday ? "today" : ""} ${index % 7 === 0 ? "sunday" : index % 7 === 6 ? "saturday" : ""}`}>
+            <div
+              key={index}
+              className={`day day-large ${day ? "active" : "empty"} ${isToday ? "today" : ""} ${index % 7 === 0 ? "sunday" : index % 7 === 6 ? "saturday" : ""}`}
+              onClick={() => handleDayClick(day)}
+            >
               <span className="day-text">{day}</span>
-              {isToday && <span className="today-circle"></span>} {/* 오늘 날짜 하이라이트 */}
+              {isToday && <span className="today-circle"></span>}
+              {hasEvent && <div className="event-bar"></div>}
             </div>
           );
         })}
       </div>
+      {showModal && (
+        <EventModal
+          selectedDate={selectedDate}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveEvent}
+        />
+      )}
     </div>
   );
 };
