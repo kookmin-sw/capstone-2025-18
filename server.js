@@ -216,40 +216,10 @@ app.get('/logout', (req, res) => {
   })
 })
 
-app.get('/groups', async (req, res) => {
-  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
-
-  try {
-    // 1. 사용자가 속한 모든 group_members 가져오기
-    const memberships = await db.collection('group_members')
-      .find({ userId: new ObjectId(req.user._id) })
-      .toArray();
-
-    // 2. 그룹 ID 목록 추출
-    const groupIds = memberships.map(m => m.groupId);
-
-    // 3. 해당 groupId 들의 그룹 정보 가져오기
-    const groups = await db.collection('groups')
-      .find({ _id: { $in: groupIds } })
-      .toArray();
-
-    // 4. 응답 데이터 조합
-    const response = memberships.map(member => {
-      const group = groups.find(g => g._id.toString() === member.groupId.toString());
-      return {
-        groupId: member.groupId,
-        groupName: group?.groupName || '(삭제된 그룹)',
-        inviteCode: group?.inviteCode || null,
-        role: member.role,
-        joinedAt: member.joinedAt
-      };
-    });
-
-    res.status(200).json(response);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('그룹 목록 불러오기 오류');
-  }
+//생성 테스트
+app.get('/groups/create', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('create-group.ejs');
 });
 
 app.post('/groups', async (req, res) => {
@@ -283,6 +253,12 @@ app.post('/groups', async (req, res) => {
     console.error(err);
     res.status(500).send('그룹 생성 중 오류 발생');
   }
+});
+
+//그룹 참가 테스트(초대 코드)
+app.get('/groups/join', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('join-group.ejs');
 });
 
 app.post('/groups/join', async (req, res) => {
@@ -322,6 +298,73 @@ app.post('/groups/join', async (req, res) => {
     res.status(500).send('그룹 참여 중 오류 발생');
   }
 });
+
+app.get('/groups', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  try {
+    // 1. 사용자가 속한 모든 group_members 가져오기
+    const memberships = await db.collection('group_members')
+      .find({ userId: new ObjectId(req.user._id) })
+      .toArray();
+
+    // 2. 그룹 ID 목록 추출
+    const groupIds = memberships.map(m => m.groupId);
+
+    // 3. 해당 groupId 들의 그룹 정보 가져오기
+    const groups = await db.collection('groups')
+      .find({ _id: { $in: groupIds } })
+      .toArray();
+
+    // 4. 응답 데이터 조합
+    const response = memberships.map(member => {
+      const group = groups.find(g => g._id.toString() === member.groupId.toString());
+      return {
+        groupId: member.groupId,
+        groupName: group?.groupName || '(삭제된 그룹)',
+        inviteCode: group?.inviteCode || null,
+        role: member.role,
+        joinedAt: member.joinedAt
+      };
+    });
+
+    res.status(200).json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('그룹 목록 불러오기 오류');
+  }
+});
+
+//그룹 리스트 테스트
+app.get('/groups/list', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  try {
+    const memberships = await db.collection('group_members')
+      .find({ userId: new ObjectId(req.user._id) })
+      .toArray();
+
+    const groupIds = memberships.map(m => m.groupId);
+    const groups = await db.collection('groups')
+      .find({ _id: { $in: groupIds } })
+      .toArray();
+
+    const combined = memberships.map(member => {
+      const group = groups.find(g => g._id.toString() === member.groupId.toString());
+      return {
+        groupId: member.groupId,
+        groupName: group?.groupName || '(삭제된 그룹)',
+        role: member.role
+      };
+    });
+
+    res.render('group-list.ejs', { groups: combined });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('그룹 리스트 조회 실패');
+  }
+});
+
 
 app.get('/groups/:id', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인이 필요합니다.');
@@ -457,3 +500,32 @@ app.get('/join/:inviteCode', async (req, res) => {
     res.status(500).send('초대코드 처리 중 오류 발생');
   }
 });
+
+//초대링크 테스트
+app.get('/groups/:id/invite-page', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const groupId = new ObjectId(req.params.id);
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('그룹 없음');
+
+    const isMember = await db.collection('group_members').findOne({
+      groupId,
+      userId: new ObjectId(req.user._id)
+    });
+    if (!isMember) return res.status(403).send('멤버 아님');
+
+    const inviteUrl = `${process.env.BASE_URL}/join/${group.inviteCode}`;
+
+    res.render('invite.ejs', {
+      groupName: group.groupName,
+      inviteUrl
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('오류 발생');
+  }
+});
+
