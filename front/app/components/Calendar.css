@@ -1,0 +1,217 @@
+/* 캘린더 전체 배경 */
+.calendar-container {
+    max-width: 400px;
+    margin: auto;
+    background: #F9F4E9; /* 2025년 3월 배경색 */
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+  }
+  
+  /* 캘린더 헤더 */
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  /* 네비게이션 버튼 */
+  .nav-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  
+  /* 네비게이션 버튼 호버 효과 */
+  .nav-btn:hover {
+    color: #007bff;
+  }
+  
+  /* 캘린더 그리드 */
+  .calendar-grid {
+    background: none;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    padding: 10px;
+  }
+  
+  /* 요일 스타일 */
+  .day-name {
+    font-weight: bold;
+    padding: 10px 0;
+    color: white;
+    padding-top: 20px;
+  }
+  
+  /* 일요일, 토요일 색상 지정 */
+  .sunday {
+    color: red;
+  }
+  
+  .saturday {
+    color: blue;
+  }
+  
+  /* 날짜 스타일 */
+  .day {
+    padding: 10px;
+    border: none; /* 기존 회색 보더 제거 */
+    min-height: 50px;
+    display: flex;
+    align-items: flex-start; /* 날짜를 상단 정렬 */
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+  }
+  
+  /* 오늘 날짜 스타일 (검정 원 + 흰색 숫자) */
+  .today {
+    font-weight: bold;
+    font-size: 12px;
+    color: white;
+  }
+  
+  .today::after {
+    content: "";
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    background: black;
+    border-radius: 50%;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: -1;
+  }
+  
+  /* 활성 날짜 스타일 */
+  .active {
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  
+  .active:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+  }
+  
+  /* 날짜 블록 크기 확대 */
+.day-large {
+    width: 50px; /* 원하는 크기로 조정 */
+    height: 50px;
+  }
+  
+  /* 날짜 글자 크기 조정 */
+  .day-text {
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 100;
+  }
+  
+  /* 오늘 날짜 강조 (작은 원 안에 숫자) */
+  /* 오늘 날짜 하이라이트 (배경만 추가) */
+.today-circle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: black;
+    border-radius: 50%;
+    /* top: 50%; */
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 0;
+  }
+  
+  
+  .cat-icon {
+    position: relative;
+    background-image: url('/cat.svg'); /* 이미지 경로 지정 */
+    background-size: contain;
+    background-repeat: no-repeat;
+    padding: 20px;
+    
+  }
+
+  /* 일정 표시 바 */
+.event-bar {
+    position: absolute;
+    width: 100%;
+    height: 10%;
+    background: red;
+    bottom: 0;
+    left: 0;
+}
+
+/* 모달 스타일 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    width: 450px;
+}
+
+.datepicker-overlay{
+  width: 100%;
+}
+
+
+.selected-label {
+  font-size: 12px;
+  color: #666;
+}
+.selected-value {
+  font-size: 20px;
+  font-weight: bold;
+}
+  
+.selected-active {
+  color: #FB8501;
+}
+.selected-inactive {
+  color: #555;
+}
+.selected-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin: 10px 0;
+}
+.selected-active {
+  color: #FB8501;
+}
+.selected-inactive {
+  color: #555;
+}
+
+.selected-circle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #FB8501;
+  border-radius: 50%;
+  /* top: 50%; */
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 0;
+}

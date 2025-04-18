@@ -1,0 +1,76 @@
+
+.timetable-container {
+  overflow: auto;
+  padding: 10px;
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.timetable-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  grid-template-rows: auto;
+}
+
+.corner-cell {
+  background-color: #eee;
+}
+
+.header-cell {
+  background-color: #f3f3f3;
+  text-align: center;
+  padding: 8px 0;
+  font-weight: bold;
+  border: 1px solid #ddd;
+  font-size: 13px;
+}
+
+.time-cell {
+  background-color: #f9f9f9;
+  text-align: right;
+  padding-right: 5px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+}
+
+.cell {
+  border: 1px solid #eee;
+  height: 40px;
+  position: relative;
+  cursor: pointer;
+}
+
+.cell.selected {
+  background-color: #d0e8ff;
+}
+
+.event-block {
+  position: absolute;
+  top: 0;
+  padding: 2px 4px;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.calendar-popup {
+  background: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ddd;
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  z-index: 10;
+}
