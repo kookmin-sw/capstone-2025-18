@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import moment from "moment";
 import EventModal from "./EventModal"; // 일정 추가 모듈 불러오기
 import "./Calendar.css";
-import TimeScrollPicker from "./TimeScrollPicker";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(moment());
