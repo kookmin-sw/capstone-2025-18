@@ -7,9 +7,8 @@ export default function LoginPopup({ onClose, onLoginSuccess, onLoginFail }) {
   const [mode, setMode] = useState("login"); // 'login' or 'signup'
 
   const handleAuth = async () => {
-    const url = mode === "login" ? "http://localhost:8080/login" : "http://localhost:8080/signup";
+    const url = mode === "login" ? "http://localhost:8080/login" : "http://localhost:8080/register";
 
-    try {
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -24,19 +23,21 @@ export default function LoginPopup({ onClose, onLoginSuccess, onLoginFail }) {
 
     if (res.ok) {
       if (mode === "login") {
+        alert("로그인 성공" + "\n| status: " + res.status + "\n| statusText: " + res.statusText + "\n| url: " + res.url);
         onLoginSuccess();
       } else {
-        alert("회원가입 성공");
+        alert("회원가입 성공" + "\n| status: " + res.status + "\n| statusText: " + res.statusText + "\n| url: " + res.url);
         setMode("login");
       }
     } else {
       if (mode === "login") {
+        alert("로그인 실패" + "\n| status: " + res.status + "\n| statusText: " + res.statusText + "\n| url: " + res.url);
         onLoginFail();
       } else {
-        alert("회원가입 실패");
+        alert("회원가입 실패" + "\n| status: " + res.status + "\n| statusText: " + res.statusText + "\n| url: " + res.url);
       }
     }
-    } catch(error) {alert(error);}
+    
   };
 
   return (

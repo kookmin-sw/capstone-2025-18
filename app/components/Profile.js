@@ -13,12 +13,10 @@ export default function Profile({
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const handleLoginSuccess = () => {
-    alert("로그인 성공");
     setShowLoginPopup(false);
   };
 
   const handleLoginFail = () => {
-    alert("로그인 실패");
   };
 
   return (
