@@ -1,16 +1,26 @@
 "use client";
 
+import { useState } from "react";
+import LoginPopup from "./LoginPopup";
+
 export default function Profile({
   visible,
-  nickname,
-  setNickname,
-  selectedImage,
-  setSelectedImage,
-  setShowProfilePopup,
-  setProfileVisible,
-  hasProfileImage,
-  setHasProfileImage,
+  nickname, setNickname,
+  selectedImage, setSelectedImage,
+  setShowProfilePopup, setProfileVisible,
+  hasProfileImage, setHasProfileImage,
 }) {
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+
+  const handleLoginSuccess = () => {
+    alert("로그인 성공");
+    setShowLoginPopup(false);
+  };
+
+  const handleLoginFail = () => {
+    alert("로그인 실패");
+  };
+
   return (
     <div className="absolute top-0 right-0 h-full w-3/4 z-50 overflow-hidden">
       <input
@@ -37,7 +47,7 @@ export default function Profile({
             setProfileVisible(false);
             setTimeout(() => setShowProfilePopup(false), 300);
           }}
-          className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-black"
+          className="absolute top-4 right-4 text-sm text-gray-500 hover:text-black"
         >
           ❌
         </button>
@@ -74,6 +84,7 @@ export default function Profile({
             프로필 사진 지우기
           </button>
         </div>
+        
         <div className="flex flex-col gap-3 mb-4 px-2">
           <input
             type="text"
@@ -82,10 +93,23 @@ export default function Profile({
             onChange={(e) => setNickname(e.target.value)}
             className="w-full border border-gray-400 p-2 rounded text-sm"
           />
-          <button className="bg-orange-500 text-white py-2 rounded text-sm">로그인</button>
-          <button className="bg-orange-500 text-white py-2 rounded text-sm">회원가입</button>
+
+          <button
+            onClick={() => setShowLoginPopup(true)}
+            className="bg-orange-500 text-white py-2 rounded text-sm"
+          >
+            로그인
+          </button>
         </div>
       </div>
+
+      {showLoginPopup && (
+        <LoginPopup
+          onClose={() => setShowLoginPopup(false)}
+          onLoginSuccess={handleLoginSuccess}
+          onLoginFail={handleLoginFail}
+        />
+      )}
     </div>
   );
 }
