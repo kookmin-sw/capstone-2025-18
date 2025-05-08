@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>일정 등록 테스트</title>
+</head>
+<body>
+  <h2>📌 일정 등록</h2>
+  <form action="/schedules" method="POST">
+    <label>제목: </label><input name="title" required><br><br>
+
+    <label>시작 시간: </label><input name="start" type="datetime-local" required><br><br>
+    <label>종료 시간: </label><input name="end" type="datetime-local" required><br><br>
+
+    <label>일정 유형: </label>
+    <select name="type">
+      <option value="monthly">monthly</option>
+      <option value="weekly">weekly</option>
+    </select><br><br>
+
+    <label>요일 (weekly일 경우, 쉼표로): </label>
+    <input name="daysOfWeek" placeholder="예: 1,3,5"><br><br>
+
+    <label>태그 이름들 (쉼표): </label><input name="tagNames" placeholder="예: 운동,중요"><br><br>
+    <label>태그 색상들 (쉼표): </label><input name="tagColors" placeholder="예: #FF0000,#00FF00"><br><br>
+
+    <button type="submit">일정 등록</button>
+  </form>
+</body>
+</html>
