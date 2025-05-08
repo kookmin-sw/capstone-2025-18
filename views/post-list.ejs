@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title><%= groupName %> 게시판</title>
+</head>
+<body>
+  <h2>📚 <%= groupName %> 게시판</h2>
+
+  <% if (posts.length === 0) { %>
+    <p>아직 게시글이 없습니다.</p>
+  <% } %>
+
+  <ul>
+    <% posts.forEach(post => { %>
+      <li>
+        <strong><%= post.title %></strong>
+        <% if (post.is_notice) { %>
+          <span style="color:red;">[공지]</span>
+        <% } %>
+        <br>
+        <%= post.content %>
+        <br>
+        <small>작성일: <%= new Date(post.created_at).toLocaleString() %></small><br>
+        <% if (post.updated_at && post.updated_at !== post.created_at) { %>
+          <small>수정됨: <%= new Date(post.updated_at).toLocaleString() %></small><br>
+        <% } %>
+
+        <!-- 수정/삭제 버튼 -->
+        <form action="/posts/<%= post._id %>?_method=DELETE" method="POST" style="display:inline;">
+          <button type="submit">삭제</button>
+        </form>
+        <a href="/posts/<%= post._id %>/edit">수정</a>
+        <hr>
+      </li>
+    <% }) %>
+  </ul>
+
+  <a href="/groups/<%= groupId %>/posts/write">➕ 새 글 작성</a>
+</body>
+</html>

@@ -754,3 +754,179 @@ app.get('/schedules/test', (req, res) => {
   res.render('schedule-test.ejs');
 });
 
+//그룹 게시판 글 작성
+app.post('/groups/:groupId/posts', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const authorId = new ObjectId(req.user._id);
+  const { title, content, is_notice } = req.body;
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('해당 그룹이 존재하지 않습니다.');
+
+    const member = await db.collection('group_members').findOne({
+      groupId,
+      userId: authorId
+    });
+    if (!member) return res.status(403).send('그룹 멤버가 아닙니다.');
+
+    const result = await db.collection('posts').insertOne({
+      group_id: groupId,
+      author_id: authorId,
+      title,
+      content,
+      is_notice: is_notice === true || is_notice === 'true',
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    res.status(200).json({
+      message: '게시글이 등록되었습니다.',
+      postId: result.insertedId
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 작성 중 오류 발생');
+  }
+});
+
+//그룹 게시판 글 조회
+app.get('/groups/:groupId/posts', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const onlyNotice = req.query.noticeOnly === 'true';
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('해당 그룹이 존재하지 않습니다.');
+
+    const member = await db.collection('group_members').findOne({
+      groupId,
+      userId: new ObjectId(req.user._id)
+    });
+    if (!member) return res.status(403).send('그룹 멤버가 아닙니다.');
+
+    const filter = { group_id: groupId };
+    if (onlyNotice) filter.is_notice = true;
+
+    const posts = await db.collection('posts')
+      .find(filter)
+      .sort({ created_at: -1 })
+      .toArray();
+
+    res.status(200).json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 목록 조회 실패');
+  }
+});
+
+//게시판 글 수정
+app.put('/posts/:postId', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+  const { title, content, is_notice } = req.body;
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: postId });
+    if (!post) return res.status(404).send('게시글이 존재하지 않습니다.');
+    if (post.author_id.toString() !== userId.toString()) {
+      return res.status(403).send('본인이 작성한 글만 수정할 수 있습니다.');
+    }
+
+    await db.collection('posts').updateOne(
+      { _id: postId },
+      {
+        $set: {
+          title,
+          content,
+          is_notice: is_notice === true || is_notice === 'true',
+          updated_at: new Date()
+        }
+      }
+    );
+
+    res.status(200).json({ message: '게시글 수정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 수정 중 오류 발생');
+  }
+});
+
+//게시판 글 삭제
+app.delete('/posts/:postId', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: postId });
+    if (!post) return res.status(404).send('게시글이 존재하지 않습니다.');
+    if (post.author_id.toString() !== userId.toString()) {
+      return res.status(403).send('본인이 작성한 글만 삭제할 수 있습니다.');
+    }
+
+    await db.collection('posts').deleteOne({ _id: postId });
+
+    res.status(200).json({ message: '게시글 삭제 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 삭제 중 오류 발생');
+  }
+});
+
+//글 작성 테스트
+// 글 작성 폼
+app.get('/groups/:groupId/posts/write', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  res.render('write-post.ejs', { groupId: req.params.groupId });
+});
+
+// 글 목록 보기
+app.get('/groups/:groupId/posts/list', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const groupId = new ObjectId(req.params.groupId);
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('그룹 없음');
+
+    const posts = await db.collection('posts')
+      .find({ group_id: groupId })
+      .sort({ is_notice: -1, created_at: -1 })
+      .toArray();
+
+    res.render('post-list.ejs', {
+      groupId,
+      groupName: group.groupName,
+      posts
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 로딩 실패');
+  }
+});
+
+// 수정 폼 보여주기
+app.get('/posts/:postId/edit', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+
+  const post = await db.collection('posts').findOne({ _id: postId });
+  if (!post) return res.status(404).send('게시글 없음');
+  if (post.author_id.toString() !== userId.toString()) {
+    return res.status(403).send('작성자만 수정할 수 있습니다.');
+  }
+
+  res.render('edit-post.ejs', { post });
+});
+
