@@ -930,3 +930,82 @@ app.get('/posts/:postId/edit', async (req, res) => {
   res.render('edit-post.ejs', { post });
 });
 
+//글 상세 조회
+app.get('/posts/:postId', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: postId });
+    if (!post) return res.status(404).send('게시글 없음');
+
+    const comments = await db.collection('comments')
+      .find({ post_id: postId })
+      .sort({ created_at: 1 })
+      .toArray();
+
+    res.status(200).json({
+      post,
+      comments
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('게시글 상세 조회 실패');
+  }
+});
+
+//댓글 달기
+app.post('/posts/:postId/comments', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+  const { content } = req.body;
+
+  if (!content || content.trim() === '') {
+    return res.status(400).send('댓글 내용을 입력해주세요.');
+  }
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: postId });
+    if (!post) return res.status(404).send('게시글 없음');
+
+    await db.collection('comments').insertOne({
+      post_id: postId,
+      author_id: userId,
+      content,
+      created_at: new Date()
+    });
+
+    res.status(200).json({ message: '댓글 등록 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('댓글 등록 실패');
+  }
+});
+//댓글 테스트
+app.get('/posts/:postId/view', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const postId = new ObjectId(req.params.postId);
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: postId });
+    if (!post) return res.status(404).send('게시글 없음');
+
+    const comments = await db.collection('comments')
+      .find({ post_id: postId })
+      .sort({ created_at: 1 })
+      .toArray();
+
+    res.render('post-detail.ejs', {
+      post,
+      comments
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('상세 조회 실패');
+  }
+});
+
