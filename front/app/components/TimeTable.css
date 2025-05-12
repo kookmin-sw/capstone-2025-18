@@ -1,9 +1,10 @@
-
 .timetable-container {
-  overflow: auto;
-  padding: 10px;
-  background-color: #fff;
+  overflow-x: auto;
+  padding: 6px;
   font-family: Arial, sans-serif;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
 }
 
 .timetable-header {
@@ -11,9 +12,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 10px;
-  position: relative;
+  margin-bottom: 8px;
+  gap: 6px;
 }
 
 .timetable-display-date {
@@ -22,21 +22,21 @@
 }
 
 .timetable-header h2 {
-  margin: 0;
-  font-size: 20px;
+  margin: 0 5px 0 10px;
+  font-size: 16px;
   flex: 1;
-}
-
-.timetable-add-event-btn, .timetable-show-calendar {
-  border-radius: 6px;
-  background-color: #fff;
-  cursor: pointer;
-  /* font-weight: bold; */
+  font-weight: 600;
 }
 
 .timetable-add-event-btn {
-  padding: 6px;
-  border: 1px solid #000;
+  border-radius: 6px;
+  background-color: #E8A01D;
+  cursor: pointer;
+  /* border: 1px solid #000; */
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
 }
 
 .tag-filter-buttons {
@@ -44,55 +44,68 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
-.tag-btn {
-  padding: 6px 10px;
+.tag-option-btn {
+  padding: 4px 6px;
   border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: bold;
+  margin: 0;
+  min-width: 30px;
+  height: 22px;
+  color: white;
 }
 
-.tag-btn.selected {
-  outline: 2px solid #000;
+.tag-option-btn.selected {
+  outline: 1.5px solid #000;
 }
 
-.timetable-grid {
+.timetable-header-grid {
   display: grid;
-  grid-template-columns: 60px repeat(7, 1fr);
-  grid-template-rows: auto;
+  grid-template-columns: 20px repeat(7, 40px);
+  width: fit-content;
+  background: #F9F4E9;
+  border-bottom: 1px solid #ccc;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
-.corner-cell {
-  /* background-color: #eee; */
+.timetable-body-grid {
+  display: grid;
+  grid-template-columns: 20px repeat(7, 40px);
+  width: fit-content;
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
 .header-cell {
-  /* background-color: #f3f3f3; */
   text-align: center;
-  padding: 8px 0;
+  padding: 4px 0;
   font-weight: bold;
+  font-size: 11px;
   border: 1px solid #eee;
-  font-size: 13px;
 }
 
 .time-cell {
   display: flex;
-  align-items: center;      
-  justify-content: flex-end; 
-  padding-right: 5px;       
-  font-size: 12px;
-  border: 1px solid #ddd;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  font-size: 10px;
+  border: 1px solid #eee;
+  /* border-left: 1px solid #ddd; */
+  font-weight: bold;
 }
 
 .cell {
   border: 1px solid #eee;
-  height: 40px;
+  height: 36px;
+  /* margin-bottom: 2px; */
   position: relative;
   cursor: pointer;
 }
@@ -103,28 +116,24 @@
 
 .event-block {
   position: absolute;
-  top: 0;
-  padding: 2px 4px;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  padding: 1px 2px;
+  font-size: 10px;
   color: white;
-  font-size: 12px;
+  border-radius: 12px;
   text-align: center;
-  border-radius: 15px;
-  box-sizing: border-box;
   overflow: hidden;
   z-index: 1;
 }
 
-.header-date {
-  font-size: 14px;
-  margin-top: 2px;
-}
-
 .selected-date-circle {
-  border: 1.5px solid black;
+  border: 1px solid black;
   background: white;
   border-radius: 50%;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -132,14 +141,14 @@
 }
 
 .header-day {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: bold;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .header-date {
-  font-size: 13px;
-  height: 26px;
+  font-size: 11px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,4 +160,13 @@
 
 .timetable-sunday {
   color: red;
+}
+
+.timetable-body-grid {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.timetable-body-grid::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }

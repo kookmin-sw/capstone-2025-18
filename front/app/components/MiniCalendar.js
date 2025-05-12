@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import moment from 'moment';
 import './MiniCalendar.css'; 
 
@@ -23,6 +23,18 @@ const MiniCalendar = ({ currentDate, onSelect, onClose }) => {
   useEffect(() => {
     setViewingMonth(currentDate.clone());
   }, [currentDate]);
+  const pickerRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   const goPrevMonth = () => {
     setViewingMonth(prev => prev.clone().subtract(1, 'month'));
@@ -32,9 +44,13 @@ const MiniCalendar = ({ currentDate, onSelect, onClose }) => {
     setViewingMonth(prev => prev.clone().add(1, 'month'));
   };
 
+  const handleXBtn = () => {
+    onClose;
+  }
+
   return (
     <div className="mini-calendar">
-      <button className="mini-calendar-close" onClick={onClose}>×</button>
+      <button className="mini-calendar-close" onClick={handleXBtn()}>×</button>
 
       <div className="mini-calendar-nav">
         <button onClick={goPrevMonth}>◀</button>
