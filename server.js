@@ -32,6 +32,12 @@ const MongoStore = require('connect-mongo')
 const KakaoStrategy = require('passport-kakao').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const NaverStrategy = require('passport-naver').Strategy;
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'http://localhost:3000', 
+  credentials: true
+}));
 
 app.use(passport.initialize())
 app.use(session({
@@ -534,7 +540,8 @@ app.post('/schedules', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인 필요');
 
   const {
-    title, start, end, type, daysOfWeek, tagNames, tagColors
+    title, type, monthlyStart, monthlyEnd, weeklyStart, weeklyEnd,
+    daysOfWeek, tagNames, tagColors
   } = req.body;
 
   const tags = (tagNames || '').split(',').map((name, i) => ({
@@ -547,7 +554,8 @@ app.post('/schedules', async (req, res) => {
 
     for (const tag of tags) {
       if (!tag.name) continue;
-      let existing = await db.collection('tags').findOne({
+
+      const existing = await db.collection('tags').findOne({
         userId: new ObjectId(req.user._id),
         name: tag.name
       });
@@ -567,15 +575,23 @@ app.post('/schedules', async (req, res) => {
     const schedule = {
       userId: new ObjectId(req.user._id),
       title,
-      start: new Date(start),
-      end: new Date(end),
-      type, // 'monthly' | 'weekly'
-      daysOfWeek: type === 'weekly'
-        ? daysOfWeek.split(',').map(x => parseInt(x.trim()))
-        : [],
+      type,
       tagIds,
       createdAt: new Date()
     };
+
+    if (type === 'monthly') {
+      schedule.start = new Date(monthlyStart); // ex) 2025-05-22T19:30
+      schedule.end = new Date(monthlyEnd);
+    } else if (type === 'weekly') {
+      const [startHour, startMinute] = String(weeklyStart).split(':').map(Number);
+      const [endHour, endMinute] = String(weeklyEnd).split(':').map(Number);
+
+      // ✅ 입력된 시각을 KST 기준으로 그대로 저장
+      schedule.start = new Date(2000, 0, 1, startHour, startMinute); // KST 21:30 → UTC 자동 변환됨
+      schedule.end = new Date(2000, 0, 1, endHour, endMinute);
+      schedule.daysOfWeek = daysOfWeek.split(',').map(x => parseInt(x.trim()));
+    }
 
     await db.collection('schedules').insertOne(schedule);
     res.status(200).json({ message: '일정 등록 완료' });
@@ -585,24 +601,32 @@ app.post('/schedules', async (req, res) => {
   }
 });
 
-
 function expandWeeklyToMonth(schedule, monthStart, monthEnd) {
   const instances = [];
   const current = new Date(monthStart);
 
   while (current <= monthEnd) {
-    const dow = current.getDay(); // 0~6
+    const dow = current.getDay(); // 요일 (0~6)
     if (schedule.daysOfWeek.includes(dow)) {
       const s = new Date(current);
-      s.setHours(schedule.start.getHours(), schedule.start.getMinutes());
+      s.setHours(
+        schedule.start.getHours(),
+        schedule.start.getMinutes(),
+        schedule.start.getSeconds() || 0
+      );
 
       const e = new Date(current);
-      e.setHours(schedule.end.getHours(), schedule.end.getMinutes());
+      e.setHours(
+        schedule.end.getHours(),
+        schedule.end.getMinutes(),
+        schedule.end.getSeconds() || 0
+      );
 
       instances.push({
-        ...schedule,
+        title: schedule.title,
         start: s,
-        end: e
+        end: e,
+        tagIds: schedule.tagIds
       });
     }
     current.setDate(current.getDate() + 1);
@@ -610,6 +634,7 @@ function expandWeeklyToMonth(schedule, monthStart, monthEnd) {
 
   return instances;
 }
+
 //월간 일정 조회
 app.get('/schedules/monthly', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인 필요');
@@ -620,22 +645,16 @@ app.get('/schedules/monthly', async (req, res) => {
   const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
   try {
-    const rawSchedules = await db.collection('schedules').find({
+    const schedules = await db.collection('schedules').find({
       userId: new ObjectId(req.user._id),
       $or: [
-        {
-          type: 'monthly',
-          start: { $lte: monthEnd },
-          end: { $gte: monthStart }
-        },
-        {
-          type: 'weekly'
-        }
+        { type: 'monthly', start: { $lte: monthEnd }, end: { $gte: monthStart } },
+        { type: 'weekly' }
       ]
     }).toArray();
 
     const tagIds = [
-      ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
+      ...new Set(schedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
 
     const tags = await db.collection('tags')
@@ -647,21 +666,31 @@ app.get('/schedules/monthly', async (req, res) => {
       tagMap[tag._id.toString()] = { name: tag.name, color: tag.color };
     }
 
-    const expanded = [];
+    const result = [];
 
-    for (const sch of rawSchedules) {
+    for (const sch of schedules) {
       if (sch.type === 'weekly') {
-        const instances = expandWeeklyToMonth(sch, monthStart, monthEnd);
-        for (const inst of instances) {
-          expanded.push({
-            title: inst.title,
-            start: inst.start,
-            end: inst.end,
-            tags: inst.tagIds.map(id => tagMap[id.toString()])
-          });
+        const current = new Date(monthStart);
+        while (current <= monthEnd) {
+          const dow = current.getDay();
+          if (sch.daysOfWeek.includes(dow)) {
+            const s = new Date(current);
+            s.setHours(sch.start.getHours(), sch.start.getMinutes());
+
+            const e = new Date(current);
+            e.setHours(sch.end.getHours(), sch.end.getMinutes());
+
+            result.push({
+              title: sch.title,
+              start: s,
+              end: e,
+              tags: sch.tagIds.map(id => tagMap[id.toString()])
+            });
+          }
+          current.setDate(current.getDate() + 1);
         }
       } else {
-        expanded.push({
+        result.push({
           title: sch.title,
           start: sch.start,
           end: sch.end,
@@ -670,7 +699,7 @@ app.get('/schedules/monthly', async (req, res) => {
       }
     }
 
-    res.status(200).json(expanded);
+    res.status(200).json(result);
   } catch (err) {
     console.error(err);
     res.status(500).send('월간 일정 조회 실패');
@@ -685,15 +714,24 @@ function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
     const dow = current.getDay();
     if (schedule.daysOfWeek.includes(dow)) {
       const s = new Date(current);
-      s.setHours(schedule.start.getHours(), schedule.start.getMinutes());
+      s.setHours(
+        schedule.start.getHours(),
+        schedule.start.getMinutes(),
+        schedule.start.getSeconds() || 0
+      );
 
       const e = new Date(current);
-      e.setHours(schedule.end.getHours(), schedule.end.getMinutes());
+      e.setHours(
+        schedule.end.getHours(),
+        schedule.end.getMinutes(),
+        schedule.end.getSeconds() || 0
+      );
 
       results.push({
-        ...schedule,
+        title: schedule.title,
         start: s,
-        end: e
+        end: e,
+        tagIds: schedule.tagIds
       });
     }
     current.setDate(current.getDate() + 1);
@@ -701,6 +739,7 @@ function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
 
   return results;
 }
+
 //주간 일정 조회
 app.get('/schedules/weekly', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인 필요');
@@ -710,13 +749,16 @@ app.get('/schedules/weekly', async (req, res) => {
   weekEnd.setDate(weekStart.getDate() + 6);
 
   try {
-    const rawSchedules = await db.collection('schedules').find({
+    const schedules = await db.collection('schedules').find({
       userId: new ObjectId(req.user._id),
-      type: 'weekly' // 🔥 월간 일정은 제외
+      $or: [
+        { type: 'monthly', start: { $lte: weekEnd }, end: { $gte: weekStart } },
+        { type: 'weekly' }
+      ]
     }).toArray();
 
     const tagIds = [
-      ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
+      ...new Set(schedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
 
     const tags = await db.collection('tags')
@@ -728,30 +770,50 @@ app.get('/schedules/weekly', async (req, res) => {
       tagMap[tag._id.toString()] = { name: tag.name, color: tag.color };
     }
 
-    const expanded = [];
+    const result = [];
 
-    for (const sch of rawSchedules) {
-      const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
-      for (const inst of instances) {
-        expanded.push({
-          title: inst.title,
-          start: inst.start,
-          end: inst.end,
-          tags: inst.tagIds.map(id => tagMap[id.toString()])
+    for (const sch of schedules) {
+      if (sch.type === 'weekly') {
+        const current = new Date(weekStart);
+        while (current <= weekEnd) {
+          const dow = current.getDay();
+          if (sch.daysOfWeek.includes(dow)) {
+            const s = new Date(current);
+            s.setHours(sch.start.getHours(), sch.start.getMinutes());
+
+            const e = new Date(current);
+            e.setHours(sch.end.getHours(), sch.end.getMinutes());
+
+            result.push({
+              title: sch.title,
+              start: s,
+              end: e,
+              tags: sch.tagIds.map(id => tagMap[id.toString()])
+            });
+          }
+          current.setDate(current.getDate() + 1);
+        }
+      } else {
+        result.push({
+          title: sch.title,
+          start: sch.start,
+          end: sch.end,
+          tags: sch.tagIds.map(id => tagMap[id.toString()])
         });
       }
     }
 
-    res.status(200).json(expanded);
+    res.status(200).json(result);
   } catch (err) {
     console.error(err);
     res.status(500).send('주간 일정 조회 실패');
   }
 });
 
-app.get('/schedules/test', (req, res) => {
+
+app.get('/schedules/form', (req, res) => {
   if (!req.user) return res.redirect('/login');
-  res.render('schedule-test.ejs');
+  res.render('schedule-form.ejs');
 });
 
 //그룹 게시판 글 작성
