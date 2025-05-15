@@ -645,16 +645,36 @@ app.get('/schedules/monthly', async (req, res) => {
   const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
   try {
-    const schedules = await db.collection('schedules').find({
+    const rawSchedules = await db.collection('schedules').find({
       userId: new ObjectId(req.user._id),
       $or: [
-        { type: 'monthly', start: { $lte: monthEnd }, end: { $gte: monthStart } },
-        { type: 'weekly' }
+        {
+          type: 'monthly',
+          start: { $lte: monthEnd },
+          end: { $gte: monthStart }
+        },
+        {
+          type: 'weekly'
+        }
       ]
     }).toArray();
 
+    // ✅ 태그 필터 파싱
+    const tagNames = (req.query.tagNames || '').split(',').map(x => x.trim()).filter(Boolean);
+    let tagFilterIds = [];
+
+    if (tagNames.length > 0) {
+      const tagDocs = await db.collection('tags').find({
+        userId: new ObjectId(req.user._id),
+        name: { $in: tagNames }
+      }).toArray();
+
+      tagFilterIds = tagDocs.map(t => t._id.toString());
+    }
+
+    // ✅ 태그 정보 미리 조회
     const tagIds = [
-      ...new Set(schedules.flatMap(s => s.tagIds.map(id => id.toString())))
+      ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
 
     const tags = await db.collection('tags')
@@ -666,31 +686,29 @@ app.get('/schedules/monthly', async (req, res) => {
       tagMap[tag._id.toString()] = { name: tag.name, color: tag.color };
     }
 
-    const result = [];
+    const expanded = [];
 
-    for (const sch of schedules) {
+    for (const sch of rawSchedules) {
+      const relevantTagIds = sch.tagIds.map(id => id.toString());
+
+      // ✅ 태그 필터링 조건
+      if (tagFilterIds.length > 0 &&
+          !relevantTagIds.some(id => tagFilterIds.includes(id))) {
+        continue;
+      }
+
       if (sch.type === 'weekly') {
-        const current = new Date(monthStart);
-        while (current <= monthEnd) {
-          const dow = current.getDay();
-          if (sch.daysOfWeek.includes(dow)) {
-            const s = new Date(current);
-            s.setHours(sch.start.getHours(), sch.start.getMinutes());
-
-            const e = new Date(current);
-            e.setHours(sch.end.getHours(), sch.end.getMinutes());
-
-            result.push({
-              title: sch.title,
-              start: s,
-              end: e,
-              tags: sch.tagIds.map(id => tagMap[id.toString()])
-            });
-          }
-          current.setDate(current.getDate() + 1);
+        const instances = expandWeeklyToMonth(sch, monthStart, monthEnd);
+        for (const inst of instances) {
+          expanded.push({
+            title: inst.title,
+            start: inst.start,
+            end: inst.end,
+            tags: inst.tagIds.map(id => tagMap[id.toString()])
+          });
         }
       } else {
-        result.push({
+        expanded.push({
           title: sch.title,
           start: sch.start,
           end: sch.end,
@@ -699,12 +717,13 @@ app.get('/schedules/monthly', async (req, res) => {
       }
     }
 
-    res.status(200).json(result);
+    res.status(200).json(expanded);
   } catch (err) {
     console.error(err);
     res.status(500).send('월간 일정 조회 실패');
   }
 });
+
 
 function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
   const results = [];
@@ -742,23 +761,42 @@ function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
 
 //주간 일정 조회
 app.get('/schedules/weekly', async (req, res) => {
-  if (!req.user) return res.status(401).send('로그인 필요');
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
 
   const weekStart = new Date(req.query.start);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
 
   try {
-    const schedules = await db.collection('schedules').find({
+    // ✅ weekly + 해당 주간에 걸친 monthly 일정까지 같이 조회
+    const rawSchedules = await db.collection('schedules').find({
       userId: new ObjectId(req.user._id),
       $or: [
-        { type: 'monthly', start: { $lte: weekEnd }, end: { $gte: weekStart } },
-        { type: 'weekly' }
+        { type: 'weekly' },
+        {
+          type: 'monthly',
+          start: { $lte: weekEnd },
+          end: { $gte: weekStart }
+        }
       ]
     }).toArray();
 
+    // ✅ 태그 필터 처리
+    const tagNames = (req.query.tagNames || '').split(',').map(x => x.trim()).filter(Boolean);
+    let tagFilterIds = [];
+
+    if (tagNames.length > 0) {
+      const tagDocs = await db.collection('tags').find({
+        userId: new ObjectId(req.user._id),
+        name: { $in: tagNames }
+      }).toArray();
+
+      tagFilterIds = tagDocs.map(t => t._id.toString());
+    }
+
+    // ✅ 태그 전체 정보 미리 가져오기
     const tagIds = [
-      ...new Set(schedules.flatMap(s => s.tagIds.map(id => id.toString())))
+      ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
 
     const tags = await db.collection('tags')
@@ -770,31 +808,30 @@ app.get('/schedules/weekly', async (req, res) => {
       tagMap[tag._id.toString()] = { name: tag.name, color: tag.color };
     }
 
-    const result = [];
+    const expanded = [];
 
-    for (const sch of schedules) {
+    for (const sch of rawSchedules) {
+      const relevantTagIds = sch.tagIds.map(id => id.toString());
+
+      // ✅ 태그 필터링
+      if (tagFilterIds.length > 0 &&
+          !relevantTagIds.some(id => tagFilterIds.includes(id))) {
+        continue;
+      }
+
+      // ✅ 반복 일정 확장 or 그대로 push
       if (sch.type === 'weekly') {
-        const current = new Date(weekStart);
-        while (current <= weekEnd) {
-          const dow = current.getDay();
-          if (sch.daysOfWeek.includes(dow)) {
-            const s = new Date(current);
-            s.setHours(sch.start.getHours(), sch.start.getMinutes());
-
-            const e = new Date(current);
-            e.setHours(sch.end.getHours(), sch.end.getMinutes());
-
-            result.push({
-              title: sch.title,
-              start: s,
-              end: e,
-              tags: sch.tagIds.map(id => tagMap[id.toString()])
-            });
-          }
-          current.setDate(current.getDate() + 1);
+        const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
+        for (const inst of instances) {
+          expanded.push({
+            title: inst.title,
+            start: inst.start,
+            end: inst.end,
+            tags: inst.tagIds.map(id => tagMap[id.toString()])
+          });
         }
-      } else {
-        result.push({
+      } else if (sch.type === 'monthly') {
+        expanded.push({
           title: sch.title,
           start: sch.start,
           end: sch.end,
@@ -803,7 +840,7 @@ app.get('/schedules/weekly', async (req, res) => {
       }
     }
 
-    res.status(200).json(result);
+    res.status(200).json(expanded);
   } catch (err) {
     console.error(err);
     res.status(500).send('주간 일정 조회 실패');
@@ -811,10 +848,30 @@ app.get('/schedules/weekly', async (req, res) => {
 });
 
 
+//태그 리스트 
+app.get('/tags', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  try {
+    const tags = await db.collection('tags').find({
+      userId: new ObjectId(req.user._id)
+    }).toArray();
+
+    res.status(200).json(tags); // [{ _id, name, color }, ...]
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('태그 목록 조회 실패');
+  }
+});
+
+//일정 등록 테스트 
 app.get('/schedules/form', (req, res) => {
   if (!req.user) return res.redirect('/login');
   res.render('schedule-form.ejs');
 });
+
+
+
 
 //그룹 게시판 글 작성
 app.post('/groups/:groupId/posts', async (req, res) => {
