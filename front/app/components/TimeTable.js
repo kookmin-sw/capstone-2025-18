@@ -5,8 +5,8 @@ import './TimeTable.css';
 import AddEventModal from './AddEventModal';
 import MiniCalendar from './MiniCalendar';
 
-const hours = Array.from({ length: 25 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-const days = [ '일', '월', '화', '수', '목', '금', '토'];
+const hours = Array.from({ length: 24 }, (_, i) => `${i}`);
+const days = ['일', '월', '화', '수', '목', '금', '토'];
 
 const defaultTags = [
   { name: '기본', color: '#d3d3d3', id: 'default-tag' }
@@ -25,7 +25,6 @@ const TimeTable = () => {
   const [modalDefaults, setModalDefaults] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [currentDate, setCurrentDate] = useState(moment());
-
 
   const handleAddEvent = () => {
     setModalDefaults(null);
@@ -97,9 +96,9 @@ const TimeTable = () => {
   };
 
   const getWeekDates = () => {
-    const startOfWeek = selectedDate.clone().startOf('week'); // 일요일 기준 시작
+    const startOfWeek = selectedDate.clone().startOf('week');
     return days.map((_, i) => startOfWeek.clone().add(i, 'days'));
-  };  
+  };
 
   const getOverlappingEvents = (dayEvents) => {
     const layout = [];
@@ -127,80 +126,89 @@ const TimeTable = () => {
   return (
     <div className="timetable-container" onMouseUp={handleMouseUp}>
       <div className="timetable-header">
-        <div className="timetable-display-date">    
-            <h2>{getWeekDates()[0].format('YYYY년 MM월')}</h2>
-
-            <button onClick={() => setShowCalendar(!showCalendar)}>&#9660;</button>
+        <div className="timetable-display-date">
+          <h2>{getWeekDates()[0].format('YYYY년 MM월')}</h2>
+          <button onClick={() => setShowCalendar(!showCalendar)} className="timetable-show-calendar">▼</button>
         </div>
-        <button onClick={handleAddEvent}>일정 추가</button>
+        <button className="timetable-add-event-btn" onClick={handleAddEvent}>일정 추가</button>
         {showCalendar && (
-        <div className="calendar-popup">
+          <div className="calendar-popup">
             <MiniCalendar
-                currentDate={selectedDate}
-                onSelect={(date) => {
-                    setSelectedDate(date);
-                    setCurrentDate(date);
-                    setShowCalendar(false);
-                }}
+              currentDate={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setCurrentDate(date);
+                setShowCalendar(true);
+              }}
             />
-        </div>
+          </div>
         )}
         <div className="tag-filter-buttons">
-        {tags.map((tag) => (
-        <button
-            key={tag.id} // ← 여기를 이렇게!
-            className={`tag-btn ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
-            style={{ backgroundColor: tag.color }}
-            onClick={() => toggleTagFilter(tag.id)}
-        >
-            {tag.name}
-        </button>
-        ))}
+          {tags.map((tag) => (
+            <button
+              key={tag.id}
+              className={`tag-option-btn ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+              style={{ backgroundColor: tag.color }}
+              onClick={() => toggleTagFilter(tag.id)}
+            >
+              {tag.name}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="timetable-grid">
-        <div className="corner-cell"></div>
-        {getWeekDates().map((date, dIdx) => (
-          <div key={dIdx} className="header-cell">{days[dIdx]}<br />{date.format('MM/DD')}</div>
-        ))}
-        {hours.map((hour, hIdx) => (
-          <React.Fragment key={hour}>
-            <div className="time-cell">{hour}</div>
-            {days.map((_, dIdx) => {
-              const visibleEvents = events.filter(ev => ev.day === dIdx && (selectedTags.length === 0 || selectedTags.includes(ev.tag.id)));
-              const layout = getOverlappingEvents(visibleEvents);
-              return (
-                <div
-                  key={`${dIdx}-${hIdx}`}
-                  className={`cell ${isDraggingOver(dIdx, hIdx) ? 'selected' : ''}`}
-                  onMouseDown={(e) => handleCellMouseDown(e, dIdx, hIdx)}
-                  onMouseEnter={() => handleCellMouseEnter(dIdx, hIdx)}
-                >
-                  {layout.map((column, colIdx) =>
-                    column.map((ev, i) => (
-                      hIdx === ev.startHour && (
-                        <div
-                          key={`${i}-${colIdx}`}
-                          className="event-block"
-                          style={{
-                            height: (ev.endHour - ev.startHour) * 40,
-                            width: `calc(${100 / layout.length}% - 4px)` ,
-                            left: `calc(${(100 / layout.length) * colIdx}% + 2px)` ,
-                            backgroundColor: ev.tag?.color || '#ccc'
-                          }}
-                          onClick={(e) => handleEventClick(e, events.indexOf(ev))}
-                        >
-                          {ev.title}
-                        </div>
-                      )
-                    ))
-                  )}
-                </div>
-              );
-            })}
-          </React.Fragment>
-        ))}
+
+      <div className="timetable-scroll-wrapper">
+        <div className="timetable-header-grid">
+          <div className="corner-cell"></div>
+          {getWeekDates().map((date, dIdx) => (
+            <div key={dIdx} className="header-cell">
+              {days[dIdx]}<br />
+              <div className="header-date">{date.format('DD')}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="timetable-body-grid">
+          {hours.map((hour, hIdx) => (
+            <React.Fragment key={hour}>
+              <div className="time-cell">{hour}</div>
+              {days.map((_, dIdx) => {
+                const visibleEvents = events.filter(ev => ev.day === dIdx && (selectedTags.length === 0 || selectedTags.includes(ev.tag.id)));
+                const layout = getOverlappingEvents(visibleEvents);
+                return (
+                  <div
+                    key={`${dIdx}-${hIdx}`}
+                    className={`cell ${isDraggingOver(dIdx, hIdx) ? 'selected' : ''}`}
+                    onMouseDown={(e) => handleCellMouseDown(e, dIdx, hIdx)}
+                    onMouseEnter={() => handleCellMouseEnter(dIdx, hIdx)}
+                  >
+                    {layout.map((column, colIdx) =>
+                      column.map((ev, i) => (
+                        hIdx === ev.startHour && (
+                          <div
+                            key={`${i}-${colIdx}`}
+                            className="event-block"
+                            style={{
+                              height: (ev.endHour - ev.startHour) * 40,
+                              width: `calc(${100 / layout.length}% - 4px)` ,
+                              left: `calc(${(100 / layout.length) * colIdx}% + 2px)` ,
+                              backgroundColor: ev.tag?.color || '#ccc'
+                            }}
+                            onClick={(e) => handleEventClick(e, events.indexOf(ev))}
+                          >
+                            {ev.title}
+                          </div>
+                        )
+                      ))
+                    )}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
+
       {showModal && (
         <AddEventModal
           onClose={() => setShowModal(false)}

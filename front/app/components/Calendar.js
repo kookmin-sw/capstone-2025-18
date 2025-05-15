@@ -50,13 +50,13 @@ const Calendar = () => {
   return (
     <div className="calendar-container">
       <div className="calendar-header">
-        <button onClick={prevMonth} className="nav-btn">&#9665;</button>
+        <button onClick={prevMonth} className="nav-btn">&#9664;</button>
         <h2>{currentDate.format("YYYY년 MM월")}</h2>
-        <button onClick={nextMonth} className="nav-btn">&#9655;</button>
+        <button onClick={nextMonth} className="nav-btn">&#9654;</button>
       </div>
       <div className="calendar-grid">
         {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
-          <div key={index} className="day-name cat-icon">
+          <div key={index} className="day-name">
             {day}
           </div>
         ))}
