@@ -870,6 +870,168 @@ app.get('/schedules/form', (req, res) => {
   res.render('schedule-form.ejs');
 });
 
+// 그룹 공유 태그 설정
+app.post('/groups/:groupId/share-tags', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+  
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+  //const tagIds = req.body.tagIds.map(id => new ObjectId(id)); // 프론트에서 태그 ID들 전송
+  const raw = req.body.tagIds || []; // undefined 방지
+  const tagIds = Array.isArray(raw)
+  ? raw.map(id => new ObjectId(id))
+  : raw ? [new ObjectId(raw)] : []; // 하나만 체크된 경우 또는 아무것도 없을 때
+  
+  try {
+    await db.collection('group_shared_tags').updateOne(
+      { groupId, userId },
+      { $set: { tagIds } },
+      { upsert: true }
+    );
+    res.status(200).json({ message: '공유 태그 설정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('공유 태그 설정 실패');
+  }
+});
+
+// 그룹 공유 태그 조회 
+app.get('/groups/:groupId/share-tags', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const shared = await db.collection('group_shared_tags').findOne({ groupId, userId });
+    const allTags = await db.collection('tags').find({ userId }).toArray();
+
+    res.status(200).json({
+      allTags, // 전체 태그 리스트
+      sharedTagIds: shared?.tagIds.map(id => id.toString()) || []
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('공유 태그 조회 실패');
+  }
+});
+
+// 공유 태그 설정 테스트  
+app.get('/groups/:groupId/share-tags/form', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const shared = await db.collection('group_shared_tags').findOne({ groupId, userId });
+    const allTags = await db.collection('tags').find({ userId }).toArray();
+
+    res.render('share-tags', {
+      groupId: groupId.toString(),
+      allTags,
+      sharedTagIds: shared?.tagIds.map(id => id.toString()) || []
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('공유 태그 설정 폼 로딩 실패');
+  }
+});
+
+//그룹 캘린더 조회
+app.get('/groups/:groupId/weekly-schedules', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const weekStart = new Date(req.query.start); // ISO string
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  try {
+    // 1. 그룹 멤버 조회
+    const members = await db.collection('group_members')
+      .find({ groupId })
+      .toArray();
+
+    const memberIds = members.map(m => m.userId);
+
+    // 2. 공유 태그 가져오기
+    const sharedTagDocs = await db.collection('group_shared_tags')
+      .find({ groupId })
+      .toArray();
+
+    const userToSharedTags = {};
+    for (const doc of sharedTagDocs) {
+      userToSharedTags[doc.userId.toString()] = doc.tagIds.map(id => id.toString());
+    }
+
+    // 3. 일정 가져오기 (weekly + 해당 주간에 걸친 monthly)
+    const schedules = await db.collection('schedules').find({
+      userId: { $in: memberIds },
+      $or: [
+        { type: 'weekly' },
+        {
+          type: 'monthly',
+          start: { $lte: weekEnd },
+          end: { $gte: weekStart }
+        }
+      ]
+    }).toArray();
+
+    // 4. 태그 필터링 적용
+    const filtered = schedules.filter(sch => {
+      const shared = userToSharedTags[sch.userId.toString()];
+      if (!shared) return true; // 설정 안한 경우 전체 공유
+      const tagIds = sch.tagIds.map(id => id.toString());
+      return tagIds.some(id => shared.includes(id));
+    });
+
+    // 5. 태그 정보 불러오기
+    const tagIds = [
+      ...new Set(filtered.flatMap(s => s.tagIds.map(id => id.toString())))
+    ].map(id => new ObjectId(id));
+
+    const tags = await db.collection('tags')
+      .find({ _id: { $in: tagIds } })
+      .toArray();
+
+    const tagMap = {};
+    for (const tag of tags) {
+      tagMap[tag._id.toString()] = { name: tag.name, color: tag.color };
+    }
+
+    // 6. 주간 확장
+    const expanded = [];
+
+    for (const sch of filtered) {
+      const relevantTags = sch.tagIds.map(id => tagMap[id.toString()]);
+      if (sch.type === 'weekly') {
+        const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
+        for (const inst of instances) {
+          expanded.push({
+            title: inst.title,
+            start: inst.start,
+            end: inst.end,
+            tags: inst.tagIds.map(id => tagMap[id.toString()])
+          });
+        }
+      } else {
+        expanded.push({
+          title: sch.title,
+          start: sch.start,
+          end: sch.end,
+          tags: sch.tagIds.map(id => tagMap[id.toString()])
+        });
+      }
+    }
+
+    res.status(200).json(expanded);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('그룹 주간 일정 조회 실패');
+  }
+});
+
 
 
 
