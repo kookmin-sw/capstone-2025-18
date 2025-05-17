@@ -6,11 +6,11 @@ const bcrypt = require('bcrypt')
 const crypto = require('crypto');
 require('dotenv').config() 
 
-app.use(methodOverride('_method')) 
 app.use(express.static(__dirname + '/public'))
 app.set('view engine', 'ejs') 
 app.use(express.json())
 app.use(express.urlencoded({extended:true})) 
+app.use(methodOverride('_method')) 
 
 let db;
 const url = process.env.DB_URL;
@@ -409,6 +409,7 @@ app.get('/groups/:id', async (req, res) => {
       groupName: group.groupName,
       inviteCode: group.inviteCode,
       ownerId: group.ownerId,
+      meetingDuration: group.meetingDuration || { hours: 1, minutes: 0 }, 
       members: memberDetails
     });
 
@@ -534,6 +535,44 @@ app.get('/groups/:id/invite-page', async (req, res) => {
     res.status(500).send('오류 발생');
   }
 });
+
+//회의 길이 설정
+app.put('/groups/:groupId/meeting-duration', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+  const groupId = new ObjectId(req.params.groupId);
+  const { hours, minutes } = req.body;
+
+  try {
+    await db.collection('groups').updateOne(
+      { _id: groupId },
+      { $set: { meetingDuration: { hours, minutes } } }
+    );
+
+    res.status(200).json({ message: '회의 길이 설정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('회의 길이 설정 실패');
+  }
+});
+
+//길이 설정 테스트  
+app.get('/groups/:groupId/meeting-duration/form', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const group = await db.collection('groups').findOne({ _id: groupId });
+
+  if (!group) return res.status(404).send('그룹 없음');
+
+  const duration = group.meetingDuration || { hours: 1, minutes: 0 };
+
+  res.render('meeting-duration-form.ejs', {
+    groupId: groupId.toString(),
+    hours: duration.hours,
+    minutes: duration.minutes
+  });
+});
+
 
 //일정 등록
 app.post('/schedules', async (req, res) => {
@@ -1029,7 +1068,7 @@ app.get('/groups/:groupId/weekly-schedules', async (req, res) => {
   }
 });
 
-
+//빈시간 추출 함수  
 function extractAvailableSlots(allSchedules, weekStart, weekEnd) {
   const TIME_BLOCKS_PER_DAY = 48; // 30분 단위 (24시간 * 2)
   const scheduleMap = {};
@@ -1109,7 +1148,7 @@ function extractAvailableSlots(allSchedules, weekStart, weekEnd) {
   return availableSlots;
 }
 
-
+//빈시간 추출  
 app.get('/groups/:groupId/available-slots', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인이 필요합니다.');
 

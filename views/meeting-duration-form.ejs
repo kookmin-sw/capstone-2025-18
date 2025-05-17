@@ -1,0 +1,11 @@
+<form action="/groups/<%= groupId %>/meeting-duration?_method=PUT" method="POST">
+  <label>시간:
+    <input type="number" name="hours" value="<%= hours %>" min="0" max="23" required>
+  </label>
+  <label>분:
+    <input type="number" name="minutes" value="<%= minutes %>" step="5" min="0" max="55" required>
+  </label>
+
+  <br><br>
+  <button type="submit">저장</button>
+</form>
