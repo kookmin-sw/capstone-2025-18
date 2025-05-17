@@ -765,10 +765,10 @@ app.get('/schedules/weekly', async (req, res) => {
 
   const weekStart = new Date(req.query.start);
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setDate(weekStart.getDate() + 7); // ✅ +6 → +7일로 확장
+  weekEnd.setHours(0, 0, 0, 0);              // ✅ 자정까지 포함
 
   try {
-    // ✅ weekly + 해당 주간에 걸친 monthly 일정까지 같이 조회
     const rawSchedules = await db.collection('schedules').find({
       userId: new ObjectId(req.user._id),
       $or: [
@@ -781,7 +781,6 @@ app.get('/schedules/weekly', async (req, res) => {
       ]
     }).toArray();
 
-    // ✅ 태그 필터 처리
     const tagNames = (req.query.tagNames || '').split(',').map(x => x.trim()).filter(Boolean);
     let tagFilterIds = [];
 
@@ -794,7 +793,6 @@ app.get('/schedules/weekly', async (req, res) => {
       tagFilterIds = tagDocs.map(t => t._id.toString());
     }
 
-    // ✅ 태그 전체 정보 미리 가져오기
     const tagIds = [
       ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
@@ -813,13 +811,11 @@ app.get('/schedules/weekly', async (req, res) => {
     for (const sch of rawSchedules) {
       const relevantTagIds = sch.tagIds.map(id => id.toString());
 
-      // ✅ 태그 필터링
       if (tagFilterIds.length > 0 &&
           !relevantTagIds.some(id => tagFilterIds.includes(id))) {
         continue;
       }
 
-      // ✅ 반복 일정 확장 or 그대로 push
       if (sch.type === 'weekly') {
         const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
         for (const inst of instances) {
@@ -940,12 +936,13 @@ app.get('/groups/:groupId/share-tags/form', async (req, res) => {
 
 //그룹 캘린더 조회
 app.get('/groups/:groupId/weekly-schedules', async (req, res) => {
-  if (!req.user) return res.status(401).send('로그인 필요');
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
 
   const groupId = new ObjectId(req.params.groupId);
   const weekStart = new Date(req.query.start); // ISO string
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setDate(weekStart.getDate() + 7);   // ✅ 기존 +6 → +7
+  weekEnd.setHours(0, 0, 0, 0);               // ✅ 정확하게 자정 기준
 
   try {
     // 1. 그룹 멤버 조회
@@ -1033,6 +1030,191 @@ app.get('/groups/:groupId/weekly-schedules', async (req, res) => {
 });
 
 
+function extractAvailableSlots(allSchedules, weekStart, weekEnd) {
+  const TIME_BLOCKS_PER_DAY = 48; // 30분 단위 (24시간 * 2)
+  const scheduleMap = {};
+
+  // ✅ 0~6 → 일~토
+  for (let d = 0; d <= 6; d++) {
+    scheduleMap[d] = Array(TIME_BLOCKS_PER_DAY).fill(0);
+  }
+
+  for (const sch of allSchedules) {
+    const start = new Date(sch.start);
+    const end = new Date(sch.end);
+
+    // ✅ 일정이 주간 범위 넘어가면 클램핑
+    const realStart = start < weekStart ? new Date(weekStart) : start;
+    const realEnd = end > weekEnd ? new Date(weekEnd) : end;
+
+    let current = new Date(realStart);
+    current.setSeconds(0, 0); // 밀리초 제거
+
+    while (current <= realEnd) {
+      const day = current.getDay(); // 0~6: 일~토
+
+      const isStartDay = current.toDateString() === realStart.toDateString();
+      const isEndDay = current.toDateString() === realEnd.toDateString();
+
+      const startHour = isStartDay ? realStart.getHours() : 0;
+      const startMin = isStartDay ? realStart.getMinutes() : 0;
+      const endHour = isEndDay ? realEnd.getHours() : 24;
+      const endMin = isEndDay ? realEnd.getMinutes() : 0;
+
+      let startIdx = startHour * 2 + (startMin >= 30 ? 1 : 0);
+      let endIdx = endHour * 2;
+
+      if (endMin > 30) endIdx += 2;
+      else if (endMin > 0) endIdx += 1;
+
+      endIdx = Math.min(endIdx, TIME_BLOCKS_PER_DAY);
+
+      for (let i = startIdx; i < endIdx; i++) {
+        scheduleMap[day][i]++;
+      }
+
+      current.setDate(current.getDate() + 1);
+      current.setHours(0, 0, 0, 0);
+    }
+  }
+
+  const availableSlots = [];
+
+  for (let day = 0; day <= 6; day++) {
+    const blocks = scheduleMap[day];
+    let i = 0;
+
+    while (i < TIME_BLOCKS_PER_DAY) {
+      while (i < TIME_BLOCKS_PER_DAY && blocks[i] > 0) i++; // busy 영역 skip
+      const startBlock = i;
+
+      while (i < TIME_BLOCKS_PER_DAY && blocks[i] === 0) i++; // empty 영역 찾기
+      const endBlock = i;
+
+      if (startBlock < endBlock) {
+        const startHour = Math.floor(startBlock / 2);
+        const startMin = startBlock % 2 === 0 ? '00' : '30';
+        const endHour = Math.floor(endBlock / 2);
+        const endMin = endBlock % 2 === 0 ? '00' : '30';
+
+        availableSlots.push({
+          day,
+          start: `${String(startHour).padStart(2, '0')}:${startMin}`,
+          end: `${String(endHour).padStart(2, '0')}:${endMin}`
+        });
+      }
+    }
+  }
+
+  return availableSlots;
+}
+
+
+app.get('/groups/:groupId/available-slots', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const groupId = new ObjectId(req.params.groupId);
+
+  // ✅ 주간 시작: 요청 날짜 기준, 해당 주의 "일요일 00:00"
+  const rawDate = new Date(req.query.start);
+  const dayOfWeek = rawDate.getDay(); // 0 (일) ~ 6 (토)
+  const weekStart = new Date(rawDate);
+  weekStart.setDate(rawDate.getDate() - dayOfWeek);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  try {
+    const members = await db.collection('group_members')
+      .find({ groupId })
+      .toArray();
+    const memberIds = members.map(m => m.userId);
+
+    const sharedTagDocs = await db.collection('group_shared_tags')
+      .find({ groupId })
+      .toArray();
+    const userToSharedTags = {};
+    for (const doc of sharedTagDocs) {
+      userToSharedTags[doc.userId.toString()] = doc.tagIds.map(id => id.toString());
+    }
+
+    const rawSchedules = await db.collection('schedules').find({
+      userId: { $in: memberIds },
+      $or: [
+        { type: 'weekly' },
+        {
+          type: 'monthly',
+          start: { $lte: weekEnd },
+          end: { $gte: weekStart }
+        }
+      ]
+    }).toArray();
+
+    const filtered = rawSchedules.filter(sch => {
+      const shared = userToSharedTags[sch.userId.toString()];
+      if (!shared) return true;
+      const tagIds = sch.tagIds.map(id => id.toString());
+      return tagIds.some(id => shared.includes(id));
+    });
+
+    const expanded = [];
+
+    for (const sch of filtered) {
+      if (sch.type === 'weekly') {
+        expanded.push(...expandWeeklyToWeek(sch, weekStart, weekEnd));
+      } else {
+        const realStart = new Date(Math.max(new Date(sch.start).getTime(), weekStart.getTime()));
+        const realEnd = new Date(Math.min(new Date(sch.end).getTime(), weekEnd.getTime()));
+
+        let current = new Date(realStart);
+        current.setHours(0, 0, 0, 0);
+
+        const last = new Date(realEnd);
+        last.setHours(0, 0, 0, 0);
+        last.setDate(last.getDate() + 1);
+
+        while (current < last) {
+          const instanceStart = new Date(current);
+          const instanceEnd = new Date(current);
+
+          const isStartDay = current.toDateString() === new Date(sch.start).toDateString();
+          const isEndDay = current.toDateString() === new Date(sch.end).toDateString();
+
+          if (isStartDay) {
+            const s = new Date(sch.start);
+            instanceStart.setHours(s.getHours(), s.getMinutes(), 0, 0);
+          } else {
+            instanceStart.setHours(0, 0, 0, 0);
+          }
+
+          if (isEndDay) {
+            const e = new Date(sch.end);
+            instanceEnd.setHours(e.getHours(), e.getMinutes(), 0, 0);
+          } else {
+            instanceEnd.setHours(24, 0, 0, 0);
+          }
+
+          expanded.push({
+            title: sch.title || '',
+            start: instanceStart,
+            end: instanceEnd,
+            tagIds: sch.tagIds || []
+          });
+
+          current.setDate(current.getDate() + 1);
+        }
+      }
+    }
+
+    const slots = extractAvailableSlots(expanded, weekStart, weekEnd);
+    res.status(200).json(slots);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('겹치지 않는 시간대 추출 실패');
+  }
+});
 
 
 //그룹 게시판 글 작성
