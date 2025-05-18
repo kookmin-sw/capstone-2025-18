@@ -98,6 +98,51 @@
     height: 30px;
   }
 
+  .settings-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .settings-row .settings-input {
+    flex: 1;
+  }
+
+  .settings-name-button {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    background-color: #E8A01D;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    height: 30px;
+    font-weight: bold;
+  }
+  
+  .tag-selector-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .tag-select-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  .tag-select-btn.selected {
+    opacity: 1;
+    border: 2px solid #fff;
+  }
+
   .settings-popup-overlay {
   position: fixed;
   inset: 0;

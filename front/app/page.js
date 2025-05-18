@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import TimeTable from "./components/TimeTable";
 import Calendar from "./components/Calendar";
-import "./page.css"; 
+import "./page.css"; // 상위 page.css 경로
 
 export default function MainPage() {
   const router = useRouter();

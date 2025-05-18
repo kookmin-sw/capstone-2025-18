@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import './TimeTable.css';
 import AddEventModal from './AddEventModal';
@@ -8,13 +8,9 @@ import MiniCalendar from './MiniCalendar';
 const hours = Array.from({ length: 24 }, (_, i) => `${i}`);
 const days = ['일', '월', '화', '수', '목', '금', '토'];
 
-const defaultTags = [
-  { name: '기본', color: '#acacac', id: 'default-tag' }
-];
-
 const TimeTable = () => {
   const [events, setEvents] = useState([]);
-  const [tags, setTags] = useState(defaultTags);
+  const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedDate, setSelectedDate] = useState(moment());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -27,27 +23,159 @@ const TimeTable = () => {
   const [editingIndex, setEditingIndex] = useState(null);
   const [currentDate, setCurrentDate] = useState(moment());
 
-  const handleAddEvent = () => {
+  useEffect(() => {
+    fetchWeeklySchedules();
+  }, [selectedDate, selectedTags.join(',')]);
+  
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  const handleAddEvent = async () => {
+    const user = await checkAuth();
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
     setModalDefaults(null);
     setEditingIndex(null);
     setShowModal(true);
   };
 
-  const handleSaveEvent = (event) => {
-    if (editingIndex !== null) {
-      const newEvents = [...events];
-      newEvents[editingIndex] = event;
-      setEvents(newEvents);
-    } else {
+  const handleSaveEvent = async (event) =>
+  {
+    try {
+      const formData = {
+        title: event.title,
+        type: 'weekly',
+        weeklyStart: `${String(event.startHour).padStart(2, '0')}:00`,
+        weeklyEnd: `${String(event.endHour).padStart(2, '0')}:00`,
+        daysOfWeek: `${event.day}`,
+        tagNames: event.tag.name,
+        tagColors: event.tag.color,
+      };
+
+      const res = await fetch('http://localhost:8080/schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg);
+      }
+
+      const result = await res.json();
+      console.log('일정 등록 성공', result);
+
       setEvents(prev => [...prev, event]);
+    } catch (err) {
+      console.error('일정 등록 실패', err);
     }
+
     setEditingIndex(null);
     setShowModal(false);
   };
 
-  const handleAddTag = (newTag) => {
+
+  const handleAddTag = async (newTag) => {
     setTags(prev => [...prev, newTag]);
+    await fetchTags();
   };
+
+  const checkAuth = async () => {
+    const res = await fetch('http://localhost:8080/isAuth', {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) return false;
+    }
+
+    const data = await res.json();
+    return true;
+  };
+
+  const fetchWeeklySchedules = async () =>
+  {
+    const startDate = selectedDate.clone().startOf('week').format('YYYY-MM-DD');
+
+    const selectedTagNames = tags
+      .filter(tag => selectedTags.includes(tag.id))
+      .map(tag => tag.name)
+      .join(',');
+
+    const url = selectedTagNames
+      ? `http://localhost:8080/schedules/weekly?start=${startDate}&tagNames=${encodeURIComponent(selectedTagNames)}`
+      : `http://localhost:8080/schedules/weekly?start=${startDate}`;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+
+    const data = await res.json();
+
+    const converted = data.map(item => {
+      const start = new Date(item.start);
+      const end = new Date(item.end);
+
+      const rawTag = item.tags?.[0] || { name: '기본', color: '#acacac' };
+
+      const matched = tags.find(tag => tag.name === rawTag.name && tag.color === rawTag.color);
+
+      const tagWithId = {
+        ...rawTag,
+        id: matched?.id || `${rawTag.name}-${rawTag.color}`
+      };
+
+      return {
+        title: item.title,
+        day: start.getDay(),
+        startHour: start.getHours(),
+        endHour: end.getHours(),
+        tag: tagWithId
+      };
+    });
+
+    setEvents(converted);
+  };
+
+  const fetchTags = async () =>
+  {
+    const res = await fetch('http://localhost:8080/tags', {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok)
+    {
+      const err = await res.text();
+      throw new Error(err);
+    }
+
+    const tagData = await res.json();
+
+    const withIds = tagData.map(tag => ({
+      id: tag._id || tag.id || tag.name,
+      name: tag.name,
+      color: tag.color
+    }));
+
+    setTags(withIds);
+  };
+
 
   const toggleTagFilter = (tagId) => {
     setSelectedTags(prev =>
@@ -61,8 +189,15 @@ const TimeTable = () => {
     setShowCalendar(!showCalendar);
   };
 
-  const handleCellMouseDown = (e, dayIdx, hourIdx) => {
+  const handleCellMouseDown = async (e, dayIdx, hourIdx) => {
     if (e.target.closest('.event-block')) return;
+
+    const user = await checkAuth();
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
     setIsDragging(true);
     setDragStart({ day: dayIdx, hour: hourIdx });
     setDragEnd({ day: dayIdx, hour: hourIdx });

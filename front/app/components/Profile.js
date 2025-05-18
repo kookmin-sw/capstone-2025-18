@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useState } from "react";
 import { useUser } from "./UserContext";
 import LoginPopup from "./LoginPopup";
@@ -14,16 +15,68 @@ export default function Profile({
   const {user, setUser} = useUser();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/user/profile", {
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNickname(data.nickname || "그루비");
+          if (data.profileImage) {
+            setSelectedImage(data.profileImage);
+            setHasProfileImage(true);
+          } else {
+            setSelectedImage(null);
+            setHasProfileImage(false);
+          }
+        }
+      } catch (err) {
+        console.error("프로필 불러오기 실패:", err);
+      }
+    };
+
+    if (user) {
+      fetchProfile();
+    } else {
+      setNickname("그루비");
+      setSelectedImage(null);
+      setHasProfileImage(false);
+    }
+  }, [user]);
+
+  const saveProfile = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          nickname,
+          profileImage: hasProfileImage ? selectedImage : ""
+        })
+      });
+      if (res.ok) {
+        alert("프로필이 저장되었습니다.");
+      } else {
+        alert("프로필 저장 실패");
+      }
+    } catch (err) {
+      console.error("프로필 저장 실패:", err);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch("http://localhost:8080/logout", {method: "GET", credentials: "include"});
     setUser(null);
+    setNickname("그루비");
+    setSelectedImage(null);
+    setHasProfileImage(false);
   };
 
   const handleLoginSuccess = () => {
     setShowLoginPopup(false);
-  };
-
-  const handleLoginFail = () => {
   };
 
   return (
@@ -56,7 +109,7 @@ export default function Profile({
         >
           🅧
         </button>
-        <p className="text-center font-semibold mb-6 text-lg">{nickname}님의 프로필</p>
+        <p className="text-center font-semibold mb-6 text-lg">{nickname || "그루비"}님의 프로필</p>
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 bg-gray-300 rounded-full mb-3 overflow-hidden flex items-center justify-center text-black text-sm font-semibold">
             {hasProfileImage ? (
@@ -70,7 +123,7 @@ export default function Profile({
                 alt="프로필"
               />
             ) : (
-              <span>{nickname}</span>
+              <span>{nickname?.charAt(0) || "?"}</span>
             )}
           </div>
           <button
@@ -89,7 +142,7 @@ export default function Profile({
             프로필 사진 지우기
           </button>
         </div>
-        
+
         <div className="flex flex-col gap-3 mb-4 px-2">
           <input
             type="text"
@@ -98,19 +151,26 @@ export default function Profile({
             onChange={(e) => setNickname(e.target.value)}
             className="w-full border border-gray-400 p-2 rounded text-sm"
           />
+          <button
+            onClick={saveProfile}
+            className="group-btn"
+            style={{ borderRadius: "50px" }}
+          >
+            프로필 저장
+          </button>
           {user ? (
             <button
-              onClick={() => handleLogout()}
-              className="btext-white py-2 rounded text-sm"
-              style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
+              onClick={handleLogout}
+              className="group-btn"
+              style={{ borderRadius: "50px" }}
             >
               로그아웃
             </button>
           ) : (
             <button
               onClick={() => setShowLoginPopup(true)}
-              className="btext-white py-2 rounded text-sm"
-              style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
+              className="group-btn"
+              style={{ borderRadius: "50px" }}
             >
               로그인
             </button>
@@ -122,7 +182,6 @@ export default function Profile({
         <LoginPopup
           onClose={() => setShowLoginPopup(false)}
           onLoginSuccess={handleLoginSuccess}
-          onLoginFail={handleLoginFail}
         />
       )}
     </div>

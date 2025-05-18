@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function PostEditor({
   mode,
-  initialValues,
+  initialValues = {},
   onSubmit,
   onCancel,
 }) {
-  const [title, setTitle] = useState(initialValues.title);
-  const [content, setContent] = useState(initialValues.content);
-  const [isNotice, setIsNotice] = useState(initialValues.isNotice);
-  const [isVote, setIsVote] = useState(initialValues.isVote);
-  const [voteOptions, setVoteOptions] = useState(initialValues.voteOptions);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [isNotice, setIsNotice] = useState(false);
+  const [isVote, setIsVote] = useState(false);
+  const [voteOptions, setVoteOptions] = useState([]);
+
+  // 최초 or initialValues 변경 시 초기화
+  useEffect(() => {
+    
+    setTitle(initialValues.title ?? "");
+    setContent(initialValues.content ?? "");
+    setIsNotice(initialValues.isNotice ?? false);
+    setIsVote(initialValues.isVote ?? false);
+    setVoteOptions(initialValues.voteOptions ?? []);
+  }, [initialValues]);
 
   return (
     <div className="popup-box">
@@ -22,7 +32,7 @@ export default function PostEditor({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="popup-input"
-        style={{padding:'0.3rem 1rem'}}
+        style={{ padding: "0.3rem 1rem" }}
       />
 
       <textarea
@@ -31,7 +41,7 @@ export default function PostEditor({
         onChange={(e) => setContent(e.target.value)}
         rows={6}
         className="popup-textarea"
-        style={{padding:'1rem'}}
+        style={{ padding: "1rem" }}
       />
 
       <div className="popup-vote">
@@ -56,11 +66,11 @@ export default function PostEditor({
       {isVote && (
         <div className="flex flex-col gap-1 mt-2">
           {voteOptions.map((option, index) => (
-            <div key={option.id} className="flex items-center">
+            <div key={option.id || index} className="flex items-center">
               <input
                 type="text"
                 placeholder={`항목 ${index + 1}`}
-                value={option.text}
+                value={option.text ?? ""}
                 onChange={(e) => {
                   const updated = voteOptions.map((opt) =>
                     opt.id === option.id ? { ...opt, text: e.target.value } : opt
@@ -84,7 +94,10 @@ export default function PostEditor({
           ))}
           <button
             onClick={() =>
-              setVoteOptions([...voteOptions, { id: crypto.randomUUID(), text: "" }])
+              setVoteOptions([
+                ...voteOptions,
+                { id: crypto.randomUUID(), text: "" },
+              ])
             }
             className="text-sm text-blue-600 self-start mt-1"
           >
@@ -101,7 +114,10 @@ export default function PostEditor({
           className="popup-btn confirm"
           onClick={() => {
             onSubmit({
-              id: mode === "edit" && initialValues.id ? initialValues.id : crypto.randomUUID(),
+              id:
+                mode === "edit" && initialValues.id
+                  ? initialValues.id
+                  : crypto.randomUUID(),
               title: title.trim() || "제목 없음",
               content,
               isNotice,
@@ -111,7 +127,7 @@ export default function PostEditor({
                     id: opt.id,
                     text: opt.text.trim() || `항목 ${index + 1}`,
                   }))
-                : undefined,
+                : [],
             });
           }}
         >

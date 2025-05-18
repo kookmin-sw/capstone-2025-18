@@ -38,72 +38,115 @@ export default function GroupPage() {
         })
         .catch((err) => {
           console.error("그룹 목록 불러오기 실패", err);
+          setGroups([]);
         });
+    } else if (!loading && !user) {
+      setGroups([]);
     }
   }, [user, loading]);
+
+  const checkAuth = async () => {
+    const res = await fetch('http://localhost:8080/isAuth', {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) return false;
+    }
+
+    const data = await res.json();
+    return true;
+  };
 
   const toggleGroup = (id) => {
     setOpenGroup(openGroup === id ? null : id);
   };
 
   const exitGroup = async () => {
-    try {
-      const res = await fetch(`http://localhost:8080/groups/${openGroup}/leave`, {
-        method: "POST",
-        credentials: "include",
-      });
+    const res = await fetch(`http://localhost:8080/groups/${openGroup}/leave`, {
+      method: "POST",
+      credentials: "include",
+    });
 
-      if (res.ok) {
-        setGroups(groups.filter((group) => group.groupId !== openGroup));
-        setShowExitPopup(false);
-        setOpenGroup(null);
-      } else {
-        alert("그룹 나가기 실패");
-      }
-    } catch (err) {
-      console.error("그룹 나가기 중 오류:", err);
+    if (res.ok) {
+      setGroups(groups.filter((group) => group.groupId !== openGroup));
+      setShowExitPopup(false);
+      setOpenGroup(null);
+    } else if (res.status == 400) {
+      alert("그룹 생성자는 나갈 수 없습니다.");
+    }
+    else {
+      alert("그룹 나가기 실패");
     }
   };
 
-  const joinGroup = () => {
-    setShowJoinPopup(false);
+  const joinGroup =  async (inviteCode) => 
+  {
+    const user = await checkAuth();
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    const res = await fetch("http://localhost:8080/groups/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ inviteCode }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) 
+    {
+      alert(data.message || "그룹에 참가했습니다.");
+      
+      // 그룹 목록 다시 불러오기
+      const refreshed = await fetch("http://localhost:8080/groups", {
+        credentials: "include",
+      });
+      const newGroups = await refreshed.json();
+      setGroups(newGroups);
+
+      setShowJoinPopup(false);
+    } 
+    else 
+    {
+      alert(data.message || "그룹 참가 실패");
+    }
   };
 
   const createGroup = async () => {
     const groupName = newGroupName.trim() || "새 그룹";
 
-    try {
-      const res = await fetch("http://localhost:8080/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupName }),
-        credentials: "include",
-      });
+    const res = await fetch("http://localhost:8080/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupName }),
+      credentials: "include",
+    });
 
-      if (res.ok) {
-        const createdGroup = await res.json();
-        setGroups([...groups, {
-            groupId: createdGroup.groupId,
-            groupName: groupName,
-            inviteCode: createdGroup.inviteCode,
-            role: "admin",
-            joinedAt: new Date().toISOString()
-        }]);
-        setShowCreatePopup(false);
-        setNewGroupName("");
-      } else {
-        alert("그룹 생성 실패");
-      }
-    } catch (err) {
-      console.error("그룹 생성 중 오류:", err);
+    if (res.ok) {
+      const createdGroup = await res.json();
+      setGroups([...groups, {
+          groupId: createdGroup.groupId,
+          groupName: groupName,
+          inviteCode: createdGroup.inviteCode,
+          role: "admin",
+          joinedAt: new Date().toISOString()
+      }]);
+      setShowCreatePopup(false);
+      setNewGroupName("");
+    } else {
+      alert("그룹 생성 실패, 먼저 로그인하세요.");
     }
   };
 
 
   const moveToIndividualPage = (group) => {
-    router.push(
-      `/IndividualPage?id=${group.id}&name=${encodeURIComponent(group.name)}&code=${group.code}`
-    );
+    sessionStorage.setItem("selectedGroupId", group.groupId);
+    router.push("/IndividualPage");
   };
 
   const icon_person = `/icons/person.png`;

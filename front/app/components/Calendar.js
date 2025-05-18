@@ -15,6 +15,67 @@ const Calendar = () => {
     generateCalendar();
   }, [currentDate, events]);
 
+  useEffect(() => {
+    fetchMonthlySchedules();
+  }, [currentDate]);
+
+  const fetchMonthlySchedules = async () =>
+  {
+    const year = currentDate.year();
+    const month = currentDate.month() + 1;
+    const url = `http://localhost:8080/schedules/monthly?year=${year}&month=${month}`;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+
+    const data = await res.json();
+
+    const parsed = data.map(item => ({
+      title: item.title,
+      date: moment(item.start),
+      tag: item.tags?.[0] || { name: '기본', color: '#ccc' }
+    }));
+
+    setEvents(parsed);
+  };
+
+  const registerMonthlySchedule = async (event) =>
+  {
+    const formData = {
+      title: event.title,
+      type: 'monthly',
+      monthlyStart: event.start.format('YYYY-MM-DDTHH:mm'),
+      monthlyEnd: event.end.format('YYYY-MM-DDTHH:mm'),
+      tagNames: event.tag.name,
+      tagColors: event.tag.color
+    };
+
+    const res = await fetch('http://localhost:8080/schedules', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify(formData)
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg);
+    }
+
+    fetchMonthlySchedules();
+    setShowModal(false);
+  };
+
+
   const generateCalendar = () => {
     const startOfMonth = currentDate.clone().startOf("month");
     const endOfMonth = currentDate.clone().endOf("month");
@@ -39,7 +100,13 @@ const Calendar = () => {
     setCurrentDate(currentDate.clone().add(1, "month"));
   };
 
-  const handleDayClick = (day) => {
+  const handleDayClick = async (day) => {
+    const user = await checkAuth();
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
     setSelectedDate(moment(currentDate).date(day));
     setShowModal(true);
   };
@@ -48,6 +115,19 @@ const Calendar = () => {
     setEvents([...events, event]);
   };
 
+  const checkAuth = async () => {
+    const res = await fetch('http://localhost:8080/isAuth', {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) return false;
+    }
+
+    const data = await res.json();
+    return true;
+  };
 
   const [calendarPosition, setCalendarPosition] = useState({ x: 0, y: 0 });
   const [showCalendar, setShowCalendar] = useState(false);
@@ -92,7 +172,7 @@ const Calendar = () => {
         <EventModal
           selectedDate={selectedDate}
           onClose={() => setShowModal(false)}
-          onSave={handleSaveEvent}
+          onSave={registerMonthlySchedule}
         />
       )}
       {showCalendar && (

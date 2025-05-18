@@ -30,15 +30,27 @@ const EventModal = ({ selectedDate, events, onClose, onSave }) => {
   }, []);
 
   const handleSave = () => {
-    if (eventName && eventStart && eventEnd) {
-      onSave({
-        name: eventName,
-        start: eventStart,
-        end: eventEnd,
-        startTime: isTimeEnabled ? { hour: startHour, minute: startMinute } : null,
-        endTime: isTimeEnabled ? { hour: endHour, minute: endMinute } : null
-      });
-    }
+    //if (!eventName || !eventStart || !eventEnd) return;
+    if (!eventStart || !eventEnd) return;
+    setEventName("test");
+
+    const fullStart = isTimeEnabled
+      ? moment(eventStart).set({ hour: startHour, minute: startMinute, second: 0 })
+      : moment(eventStart).startOf('day');
+
+    const fullEnd = isTimeEnabled
+      ? moment(eventEnd).set({ hour: endHour, minute: endMinute, second: 0 })
+      : moment(eventEnd).endOf('day');
+
+    const defaultTag = { name: "기본", color: "#999999" };
+
+    onSave({
+      title: eventName,
+      start: fullStart,
+      end: fullEnd,
+      tag: defaultTag
+    });
+
     onClose();
   };
 

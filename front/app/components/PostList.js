@@ -6,10 +6,10 @@ export default function PostList({ posts, onSelect }) {
   }
 
   return (
-    <div className="absolute inset-0 overflow-y-auto px-2 py-4 custom-scrollbar space-y-1">
+    <div className="w-full overflow-y-auto px-2 py-4 custom-scrollbar space-y-1">
       {posts.map((post) => (
         <div
-          key={post.id}
+          key={post._id}
           className="bg-white p-3 rounded shadow cursor-pointer"
           onClick={() => onSelect(post)}
         >

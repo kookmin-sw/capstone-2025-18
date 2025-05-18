@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useUser } from "./UserContext";
 
-export default function LoginPopup({ onClose, onLoginSuccess, onLoginFail }) {
+export default function LoginPopup({ onClose, onLoginSuccess }) {
   const {user, setUser} = useUser();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +35,6 @@ export default function LoginPopup({ onClose, onLoginSuccess, onLoginFail }) {
       if (mode === "login") {
         setResultMessage("!!로그인 실패!!");
         setResultType("error");
-        onLoginFail();
       } else {
         setResultMessage("!!회원가입 실패!!");
         setResultType("error");
