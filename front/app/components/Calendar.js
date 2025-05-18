@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect } from "react";
 import moment from "moment";
-import EventModal from "./EventModal"; // 일정 추가 모듈 불러오기
+import EventModal from "./EventModal";
+import MiniCalendar from "./MiniCalendar";
 import "./Calendar.css";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(moment());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(currentDate);
   const [showModal, setShowModal] = useState(false);
   const [events, setEvents] = useState([]);
 
@@ -47,11 +48,20 @@ const Calendar = () => {
     setEvents([...events, event]);
   };
 
+
+  const [calendarPosition, setCalendarPosition] = useState({ x: 0, y: 0 });
+  const [showCalendar, setShowCalendar] = useState(false);
+  const handleDateClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCalendarPosition({ x: rect.left, y: rect.bottom });
+    setShowCalendar(!showCalendar);
+  };
+
   return (
     <div className="calendar-container">
       <div className="calendar-header">
         <button onClick={prevMonth} className="nav-btn">&#9664;</button>
-        <h2>{currentDate.format("YYYY년 MM월")}</h2>
+        <h2 onClick={handleDateClick}>{currentDate.format("YYYY년 MM월")}</h2>
         <button onClick={nextMonth} className="nav-btn">&#9654;</button>
       </div>
       <div className="calendar-grid">
@@ -85,6 +95,22 @@ const Calendar = () => {
           onSave={handleSaveEvent}
         />
       )}
+      {showCalendar && (
+          <div
+            className="calendar-popup"
+            style={{ position: 'absolute', top: calendarPosition.y}}
+          >
+            <MiniCalendar
+              currentDate={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setCurrentDate(date);
+                setShowCalendar(true);
+              }}
+              onClose={() => setShowCalendar(false)}
+            />
+          </div>
+        )}
     </div>
   );
 };

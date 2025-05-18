@@ -1,20 +1,21 @@
 "use client";
+import './GroupPopup.css';
 
 export default function GroupJoinPopup({ onJoin, onCancel }) {
   return (
-    <div className="fixed inset-0 bg-black/30 flex justify-center items-center">
-      <div className="bg-white text-black p-4 rounded-lg">
-        <p className="mb-4">참여 코드를 입력해주세요</p>
+    <div className="popup-overlay">
+      <div className="popup-box">
+        <p className="popup-title">참여 코드를 입력해주세요</p>
         <input
           type="text"
           placeholder="예: A1B2C"
-          className="w-full border border-gray-400 p-2 rounded mb-3 text-sm"
+          className="popup-input"
         />
-        <div className="flex justify-between">
-          <button onClick={onCancel} className="bg-gray-400 px-3 py-1 rounded">
+        <div className="popup-buttons">
+          <button onClick={onCancel} className="popup-btn cancel">
             취소
           </button>
-          <button onClick={onJoin} className="bg-red-500 text-white px-3 py-1 rounded">
+          <button onClick={onJoin} className="popup-btn confirm">
             확인
           </button>
         </div>

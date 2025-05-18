@@ -47,7 +47,7 @@ export default function Profile({
           }}
           className="absolute top-4 right-4 text-sm text-gray-500 hover:text-black"
         >
-          ❌
+          🅧
         </button>
         <p className="text-center font-semibold mb-6 text-lg">{nickname}님의 프로필</p>
         <div className="flex flex-col items-center mb-6">
@@ -94,7 +94,8 @@ export default function Profile({
 
           <button
             onClick={() => setShowLoginPopup(true)}
-            className="bg-orange-500 text-white py-2 rounded text-sm"
+            className="btext-white py-2 rounded text-sm"
+            style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
           >
             로그인
           </button>

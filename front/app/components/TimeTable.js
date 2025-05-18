@@ -9,7 +9,7 @@ const hours = Array.from({ length: 24 }, (_, i) => `${i}`);
 const days = ['일', '월', '화', '수', '목', '금', '토'];
 
 const defaultTags = [
-  { name: '기본', color: '#d3d3d3', id: 'default-tag' }
+  { name: '기본', color: '#acacac', id: 'default-tag' }
 ];
 
 const TimeTable = () => {
@@ -18,6 +18,7 @@ const TimeTable = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedDate, setSelectedDate] = useState(moment());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarPosition, setCalendarPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
@@ -52,6 +53,12 @@ const TimeTable = () => {
     setSelectedTags(prev =>
       prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
     );
+  };
+
+  const handleCalendarToggle = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCalendarPosition({ x: rect.left, y: rect.bottom });
+    setShowCalendar(!showCalendar);
   };
 
   const handleCellMouseDown = (e, dayIdx, hourIdx) => {
@@ -123,16 +130,23 @@ const TimeTable = () => {
     return hIdx >= start && hIdx <= end;
   };
 
+  const icon_plus_thin = `/icons/plus-thin.png`;
+
   return (
     <div className="timetable-container" onMouseUp={handleMouseUp}>
       <div className="timetable-header">
-        <div className="timetable-display-date">
+        <div className="timetable-display-date"  onClick={handleCalendarToggle}>
           <h2>{getWeekDates()[0].format('YYYY년 MM월')}</h2>
-          <button onClick={() => setShowCalendar(!showCalendar)} className="timetable-show-calendar">▼</button>
+          <button onClick={handleCalendarToggle} className="timetable-show-calendar">▼</button>
         </div>
-        <button className="timetable-add-event-btn" onClick={handleAddEvent}>일정 추가</button>
+        <button className="timetable-add-event-btn" onClick={handleAddEvent}>
+          <img src={icon_plus_thin} />
+        </button>
         {showCalendar && (
-          <div className="calendar-popup">
+          <div
+            className="calendar-popup"
+            style={{ position: 'absolute', top:0, scale:0.8, left:0}}
+          >
             <MiniCalendar
               currentDate={selectedDate}
               onSelect={(date) => {
@@ -140,6 +154,7 @@ const TimeTable = () => {
                 setCurrentDate(date);
                 setShowCalendar(true);
               }}
+              onClose={() => setShowCalendar(false)}
             />
           </div>
         )}
