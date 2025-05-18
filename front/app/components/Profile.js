@@ -98,32 +98,23 @@ export default function Profile({
             onChange={(e) => setNickname(e.target.value)}
             className="w-full border border-gray-400 p-2 rounded text-sm"
           />
-<<<<<<< HEAD
           {user ? (
             <button
               onClick={() => handleLogout()}
-              className="bg-orange-500 text-white py-2 rounded text-sm"
+              className="btext-white py-2 rounded text-sm"
+              style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
             >
               로그아웃
             </button>
           ) : (
             <button
               onClick={() => setShowLoginPopup(true)}
-              className="bg-orange-500 text-white py-2 rounded text-sm"
+              className="btext-white py-2 rounded text-sm"
+              style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
             >
               로그인
             </button>
           )}
-=======
-
-          <button
-            onClick={() => setShowLoginPopup(true)}
-            className="btext-white py-2 rounded text-sm"
-            style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
-          >
-            로그인
-          </button>
->>>>>>> 8284eaff72a4e62ee4be18a3d2c41beaad1d55f2
         </div>
       </div>
 

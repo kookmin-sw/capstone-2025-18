@@ -106,19 +106,10 @@ export default function GroupPage() {
     );
   };
 
-<<<<<<< HEAD
-  if (loading) {
-    return <div>loading...</div>;
-  }
-
-=======
-  
-
   const icon_person = `/icons/person.png`;
   const icon_back_black = `/icons/back-black.png`;
   const icon_search = `/icons/search.png`;
   const icon_plus = `/icons/plus.png`
->>>>>>> 8284eaff72a4e62ee4be18a3d2c41beaad1d55f2
   return (
     <div className="group-page-container">
       <div className="group-page-header">
