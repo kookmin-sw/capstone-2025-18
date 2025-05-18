@@ -15,13 +15,14 @@ export default function PostEditor({
   const [voteOptions, setVoteOptions] = useState(initialValues.voteOptions);
 
   return (
-    <div className="bg-white text-black rounded-lg w-80 p-4 flex flex-col gap-4">
+    <div className="popup-box">
       <input
         type="text"
         placeholder="제목을 입력하세요"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="border border-gray-400 px-3 py-2 rounded text-sm"
+        className="popup-input"
+        style={{padding:'0.3rem 1rem'}}
       />
 
       <textarea
@@ -29,11 +30,12 @@ export default function PostEditor({
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={6}
-        className="border border-gray-400 px-3 py-2 rounded text-sm resize-none"
+        className="popup-textarea"
+        style={{padding:'1rem'}}
       />
 
-      <div className="flex items-center justify-between text-sm">
-        <label className="flex items-center gap-2 px-3 py-1 border rounded cursor-pointer">
+      <div className="popup-vote">
+        <label className="popup-checkbox">
           <input
             type="checkbox"
             checked={isNotice}
@@ -41,7 +43,7 @@ export default function PostEditor({
           />
           공지
         </label>
-        <label className="flex items-center gap-2 px-3 py-1 border rounded cursor-pointer">
+        <label className="popup-checkbox">
           <input
             type="checkbox"
             checked={isVote}
@@ -92,11 +94,11 @@ export default function PostEditor({
       )}
 
       <div className="flex justify-between">
-        <button className="px-3 py-1 bg-gray-300 text-black rounded" onClick={onCancel}>
+        <button className="popup-btn cancel" onClick={onCancel}>
           취소
         </button>
         <button
-          className="px-3 py-1 bg-orange-500 text-white rounded"
+          className="popup-btn confirm"
           onClick={() => {
             onSubmit({
               id: mode === "edit" && initialValues.id ? initialValues.id : crypto.randomUUID(),

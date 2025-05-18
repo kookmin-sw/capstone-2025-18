@@ -59,9 +59,22 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
   const isEditing = typeof defaultTitle === 'string' && defaultTitle.trim().length > 0;
   const isFromDrag = defaultDay === 'drag';
 
+  const icon_check_black = `/icons/check_black.png`;
+  const icon_cancel_black = `/icons/cancel_black.png`;
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
+
+        <div className="modal-actions">
+          <button onClick={onClose}>
+            <img src={icon_cancel_black} className='modal-close-btn'/>
+          </button>
+          <button onClick={handleSubmit}>
+            <img src={icon_check_black} className='modal-submit-btn' />
+          </button>
+        </div>
+
         <h3>{isEditing ? '일정 수정' : '일정 추가'}</h3>
 
         <label>제목</label>
@@ -83,20 +96,28 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
             </div>
           </>
         )}
+        
+        <div className='add-event-time'> 
+          <div className='add-event-time-start'>
+            <label>시작 시간</label>
+            <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
+              {Array.from({ length: 25 }, (_, i) => (
+                <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className='add-event-time-end'>
+            <label>종료 시간</label>
+            <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
+              {Array.from({ length: 25 }, (_, i) => (
+                <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
+              ))}
+            </select>
+          </div>
+          
 
-        <label>시작 시간</label>
-        <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
-          {Array.from({ length: 25 }, (_, i) => (
-            <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </select>
-
-        <label>종료 시간</label>
-        <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
-          {Array.from({ length: 25 }, (_, i) => (
-            <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </select>
+        </div>
 
         <div className="tag-options">
           {tags.map((tag, i) => (
@@ -132,15 +153,12 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
             </div>
             <div className="modal-actions">
               <button onClick={handleAddNewTag}>태그 생성</button>
-              <button onClick={() => setShowTagCreator(false)}>취소</button>
+              <button onClick={() => setShowTagCreator(false)}>
+                취소
+              </button>
             </div>
           </div>
         )}
-
-        <div className="modal-actions">
-          <button onClick={handleSubmit}>확인</button>
-          <button onClick={onClose}>취소</button>
-        </div>
       </div>
     </div>
   );
