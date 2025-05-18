@@ -14,6 +14,9 @@
   justify-content: space-between;
   margin-bottom: 8px;
   gap: 6px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .timetable-display-date {
@@ -25,18 +28,23 @@
   margin: 0 5px 0 10px;
   font-size: 16px;
   flex: 1;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .timetable-add-event-btn {
-  border-radius: 6px;
-  background-color: #E8A01D;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #202020;
   cursor: pointer;
-  /* border: 1px solid #000; */
   padding: 4px 8px;
-  font-size: 12px;
-  font-weight: bold;
-  color: white;
+  display: flex;
+  justify-items: center;
+  align-items: center;
+}
+
+.timetable-add-event-btn img {
+  width: 20px;
 }
 
 .tag-filter-buttons {
@@ -45,7 +53,7 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  /* margin-top: 6px; */
 }
 
 .tag-option-btn {
@@ -56,11 +64,18 @@
   margin: 0;
   min-width: 30px;
   height: 22px;
-  color: white;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .tag-option-btn.selected {
   outline: 1.5px solid #000;
+  opacity: 1;
+}
+
+.timetable-scroll-wrapper {
+  overflow-y: auto;
+  max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 88px);
 }
 
 .timetable-header-grid {
@@ -71,8 +86,8 @@
   border-bottom: 1px solid #ccc;
   flex-shrink: 0;
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: 0px;
+  z-index: 40;
 }
 
 .timetable-body-grid {
@@ -81,13 +96,20 @@
   width: fit-content;
   flex-grow: 1;
   overflow-y: auto;
+  background-color: #F9F4E9;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.timetable-body-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .header-cell {
   text-align: center;
   padding: 4px 0;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 13px;
   border: 1px solid #eee;
 }
 
@@ -96,16 +118,22 @@
   align-items: center;
   justify-content: flex-end;
   padding-right: 4px;
-  font-size: 10px;
+  font-size: 12px;
   border: 1px solid #eee;
-  /* border-left: 1px solid #ddd; */
   font-weight: bold;
+}
+
+.header-date {
+  font-size: 11px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cell {
   border: 1px solid #eee;
-  height: 36px;
-  /* margin-bottom: 2px; */
+  height: 45px;
   position: relative;
   cursor: pointer;
 }
@@ -146,27 +174,10 @@
   margin-bottom: 2px;
 }
 
-.header-date {
-  font-size: 11px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .timetable-saturday {
   color: blue;
 }
 
 .timetable-sunday {
   color: red;
-}
-
-.timetable-body-grid {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
-}
-
-.timetable-body-grid::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
 }

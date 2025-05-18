@@ -7,6 +7,7 @@ import Profile from "../components/Profile";
 import GroupCreatePopup from "../components/GroupCreatePopup";
 import GroupJoinPopup from "../components/GroupJoinPopup";
 import GroupExitPopup from "../components/GroupExitPopup";
+import './group.css';
 
 export default function GroupPage() {
   const router = useRouter();
@@ -67,15 +68,23 @@ export default function GroupPage() {
     );
   };
 
+  
+
+  const icon_person = `/icons/person.png`;
+  const icon_back_black = `/icons/back-black.png`;
+  const icon_search = `/icons/search.png`;
+  const icon_plus = `/icons/plus.png`
   return (
-    <div className="w-80 mx-auto bg-gray-500 text-white p-4 rounded-lg min-h-screen flex flex-col relative">
-      <div className="relative mb-2 flex items-center justify-center">
+    <div className="group-page-container">
+      <div className="group-page-header">
         <button
           onClick={() => router.push("/")}
-          className="absolute left-0 top-0 text-white text-xl"
           aria-label="뒤로가기"
         >
-          ◀
+          <img
+            src={icon_back_black}
+            className="header-icon" 
+          />
         </button>
         <h2 className="text-center font-bold">내 그룹</h2>
         <button
@@ -83,9 +92,8 @@ export default function GroupPage() {
             setShowProfilePopup(true);
             setTimeout(() => setProfileVisible(true), 10);
           }}
-          className="absolute right-0 top-0 -translate-y-[2px] text-white text-xl"
         >
-          👤
+          <img src={icon_person} className="header-icon" />
         </button>
       </div>
 
@@ -99,10 +107,12 @@ export default function GroupPage() {
 
       <div className="fixed bottom-0 left-0 w-full z-10">
         <div className="w-80 mx-auto px-4 py-3 flex justify-between">
-          <button onClick={() => setShowJoinPopup(true)} className="bg-orange-500 text-white px-3 py-1 rounded">
+          <button onClick={() => setShowJoinPopup(true)} className="groupList-btn">
+            <img src={icon_search} />
             그룹 찾기
           </button>
-          <button onClick={() => setShowCreatePopup(true)} className="bg-orange-500 text-white px-3 py-1 rounded">
+          <button onClick={() => setShowCreatePopup(true)} className="groupList-btn">
+            <img src={icon_plus} />
             그룹 생성
           </button>
         </div>

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import moment from 'moment';
@@ -23,6 +22,7 @@ const MiniCalendar = ({ currentDate, onSelect, onClose }) => {
   useEffect(() => {
     setViewingMonth(currentDate.clone());
   }, [currentDate]);
+
   const pickerRef = useRef(null);
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -45,23 +45,25 @@ const MiniCalendar = ({ currentDate, onSelect, onClose }) => {
   };
 
   const handleXBtn = () => {
-    onClose;
-  }
+    onClose(); // ✅ 함수 호출로 수정
+  };
 
   return (
-    <div className="mini-calendar">
-      <button className="mini-calendar-close" onClick={handleXBtn()}>×</button>
+    <div className="mini-calendar" ref={pickerRef}>
+      <button className="mini-calendar-close" onClick={handleXBtn}>×</button>
 
       <div className="mini-calendar-nav">
         <button onClick={goPrevMonth}>◀</button>
         <span>{viewingMonth.format('YYYY년 M월')}</span>
         <button onClick={goNextMonth}>▶</button>
       </div>
+
       <div className="mini-calendar-header-row">
         {["일", "월", "화", "수", "목", "금", "토"].map((d, idx) => (
           <div key={idx} className="mini-day-name">{d}</div>
         ))}
       </div>
+
       <div className="mini-calendar-grid">
         {days.map((day, idx) => {
           const isToday = day && day.isSame(today, 'day');
@@ -70,12 +72,9 @@ const MiniCalendar = ({ currentDate, onSelect, onClose }) => {
             <div
               key={idx}
               className='mini-day-cell'
-              // className={`mini-day-cell ${day ? 'active' : 'empty'} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
               onClick={() => day && onSelect(day.clone())}
             >
               {day ? <span className="mini-day-text">{day.date()}</span> : ''}
-              {/* {isToday && <span className="today-circle"></span>} */}
-              {/* {isSelected && <span className="selected-circle"></span>} */}
             </div>
           );
         })}
