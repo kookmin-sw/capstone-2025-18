@@ -1255,6 +1255,320 @@ app.get('/groups/:groupId/available-slots', async (req, res) => {
   }
 });
 
+//그룹 투표 시작
+app.post('/groups/:groupId/vote/start', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const groupId = new ObjectId(req.params.groupId);
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('그룹 없음');
+
+    if (group.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).send('그룹장만 투표를 시작할 수 있습니다.');
+    }
+
+    // 기존 active 투표가 있다면 중복 생성 방지
+    const existing = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+    if (existing) return res.status(400).send('이미 진행 중인 투표가 있습니다.');
+
+    // 회의 길이 가져오기
+    const duration = group.meetingDuration || { hours: 1, minutes: 0 };
+
+    await db.collection('vote_sessions').insertOne({
+      groupId,
+      status: 'active',
+      duration,
+      createdAt: new Date()
+    });
+
+    res.status(200).json({ message: '투표가 시작되었습니다.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 시작 중 오류');
+  }
+});
+
+//투표 제출
+app.post('/groups/:groupId/vote', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+  const start = new Date(req.body.start);
+  const end = new Date(req.body.end); // ✅ 프론트에서 직접 계산해서 보냄
+
+  try {
+    const session = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+    if (!session) return res.status(400).send('진행 중인 투표가 없습니다.');
+
+    await db.collection('vote_selections').updateOne(
+      { voteSessionId: session._id, userId },
+      {
+        $set: {
+          groupId,
+          start,
+          end,
+          updatedAt: new Date()
+        },
+        $setOnInsert: {
+          voteSessionId: session._id,
+          createdAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    res.status(200).json({
+      message: '투표가 저장되었습니다.',
+      vote: {
+        start: start.toISOString(),
+        end: end.toISOString()
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 저장 실패');
+  }
+});
+
+
+//투표 현황 조회
+app.get('/groups/:groupId/vote/status', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const session = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+    if (!session) return res.status(400).send('진행 중인 투표 없음');
+
+    // 내 투표
+    const myVote = await db.collection('vote_selections').findOne({
+      voteSessionId: session._id,
+      userId
+    });
+
+    // 전체 투표 모음 (내 것 제외)
+    const allVotes = await db.collection('vote_selections')
+      .find({ voteSessionId: session._id })
+      .toArray();
+
+    const voteMap = {};
+
+    for (const vote of allVotes) {
+      const key = vote.start.toISOString();
+      if (!voteMap[key]) {
+        voteMap[key] = {
+          start: vote.start,
+          end: vote.end,
+          count: 0
+        };
+      }
+      voteMap[key].count += 1;
+    }
+
+    // myVote는 별도로
+    const others = Object.values(voteMap).filter(v =>
+      !myVote || v.start.toISOString() !== myVote.start.toISOString()
+    );
+
+    res.status(200).json({
+      myVote: myVote
+        ? { start: myVote.start, end: myVote.end }
+        : null,
+      others
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 현황 조회 실패');
+  }
+});
+
+//투표 취소
+app.delete('/groups/:groupId/vote/delete', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const session = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+
+    if (!session) return res.status(400).send('진행 중인 투표가 없습니다.');
+
+    await db.collection('vote_selections').deleteOne({
+      voteSessionId: session._id,
+      userId: userId
+    });
+
+    res.status(200).json({ message: '투표가 취소되었습니다.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 취소 실패');
+  }
+});
+
+//투표 종료
+app.post('/groups/:groupId/vote/close', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group || group.ownerId.toString() !== userId.toString()) {
+      return res.status(403).send('그룹장만 종료할 수 있습니다.');
+    }
+
+    const session = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+    if (!session) return res.status(400).send('진행 중인 투표가 없습니다.');
+
+    const selections = await db.collection('vote_selections')
+      .find({ voteSessionId: session._id })
+      .toArray();
+
+    if (selections.length === 0) {
+      return res.status(400).send('투표자가 없습니다.');
+    }
+
+    // ✅ 같은 시간대별로 그룹핑
+    const countMap = {};
+    for (const s of selections) {
+      const key = s.start.toISOString() + '_' + s.end.toISOString();
+      if (!countMap[key]) {
+        countMap[key] = { count: 1, start: s.start, end: s.end };
+      } else {
+        countMap[key].count++;
+      }
+    }
+
+    // ✅ 가장 많은 투표 받은 시간 구하기
+    const sorted = Object.values(countMap).sort((a, b) => b.count - a.count);
+    const top = sorted[0]; // 득표 수가 가장 높은 시간
+
+    // ✅ 참여한 모든 사람에게 해당 일정 등록
+    const userIds = [...new Set(selections.map(s => s.userId.toString()))].map(id => new ObjectId(id));
+    const now = new Date();
+
+    const docs = userIds.map(uid => ({
+      userId: uid,
+      title: '회의 일정 (투표 결과)',
+      type: 'monthly',
+      start: top.start,
+      end: top.end,
+      tagIds: [],
+      createdAt: now
+    }));
+
+    await db.collection('schedules').insertMany(docs);
+
+    // ✅ 투표 세션 상태 종료 처리
+    await db.collection('vote_sessions').updateOne(
+      { _id: session._id },
+      { $set: { status: 'closed', closedAt: now } }
+    );
+
+    res.status(200).json({
+      message: '투표가 종료되었고, 회의 시간이 등록되었습니다.',
+      selected: {
+        start: top.start,
+        end: top.end,
+        count: top.count
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 종료 실패');
+  }
+});
+
+//투표 테스트
+app.get('/groups/:groupId/vote/form', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+
+  const groupId = new ObjectId(req.params.groupId);
+  const userId = new ObjectId(req.user._id);
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('그룹을 찾을 수 없습니다.');
+
+    const session = await db.collection('vote_sessions').findOne({
+      groupId,
+      status: 'active'
+    });
+
+    if (!session) {
+      return res.render('vote-form.ejs', {
+        groupId: groupId.toString(),
+        isOwner: group.ownerId.toString() === userId.toString(),
+        myVote: null,
+        others: []
+      });
+    }
+
+    const votes = await db.collection('vote_selections')
+      .find({ voteSessionId: session._id })
+      .toArray();
+
+    const myVote = votes.find(v => v.userId.toString() === userId.toString()) || null;
+
+    // ✅ 다른 사람들의 투표 시간대 그룹핑
+    const countMap = {};
+    for (const vote of votes) {
+      if (vote.userId.toString() === userId.toString()) continue;
+
+      const key = vote.start.toISOString() + '_' + vote.end.toISOString();
+      if (!countMap[key]) {
+        countMap[key] = {
+          start: vote.start.toISOString().slice(0, 16),
+          end: vote.end.toISOString().slice(0, 16),
+          count: 1
+        };
+      } else {
+        countMap[key].count++;
+      }
+    }
+
+    const others = Object.values(countMap); // 배열로 변환
+
+    res.render('vote-form.ejs', {
+      groupId: groupId.toString(),
+      isOwner: group.ownerId.toString() === userId.toString(), // ✅ 추가됨!
+      myVote: myVote
+        ? {
+            start: myVote.start.toISOString().slice(0, 16),
+            end: myVote.end.toISOString().slice(0, 16)
+          }
+        : null,
+      others
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 폼 로딩 실패');
+  }
+});
+
+
 
 //그룹 게시판 글 작성
 app.post('/groups/:groupId/posts', async (req, res) => {
