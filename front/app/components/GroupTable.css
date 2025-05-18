@@ -1,0 +1,139 @@
+:root {
+    --group-header-height: 40px;
+    --group-tabbar-height: 49px;
+  }
+
+.cell.unavailable {
+  background-color: #ddd;
+  pointer-events: none;
+  z-index: 1;
+  border: none !important;
+}
+
+.unavailable-radius-top {
+  border-radius: 15px 15px 0 0;
+}
+
+.unavailable-radius-bottom {
+  border-radius: 0 0 15px 15px;
+}
+
+
+.cell.fixed {
+  border: 5px solid #DD6250;
+}
+
+.fixed-radius-top {
+  background-color: #F0BBBB;
+  border-radius: 15px 15px 0 0 !important;
+
+  border: 5px solid #DD6250 !important;
+  border-bottom: none  !important;
+}
+
+.fixed-radius-middle {
+  background-color: #F0BBBB;
+  border-radius: 0 !important;
+  
+  border-left: 5px solid #DD6250 !important;
+  border-right: 5px solid #DD6250 !important;
+}
+
+.fixed-radius-bottom {
+  background-color: #F0BBBB;
+  border-radius: 0 0 15px 15px !important;
+  
+  border: 5px solid #DD6250 !important;
+  border-top: none  !important;
+}
+
+.selected-border-top {
+  border: 5px solid #DD6250 !important;
+  border-bottom: none  !important;
+  border-radius: 15px 15px 0 0 !important;
+}
+
+.selected-border-middle {
+  border-left: 5px solid #DD6250 !important;
+  border-right: 5px solid #DD6250 !important;
+
+  border-radius: 0 !important;
+}
+
+.selected-border-bottom {
+  border: 5px solid #DD6250 !important;
+  border-top: none !important;
+  border-radius: 0 0 15px 15px !important;
+}
+
+.group-calendar-header-bar{
+    display: flex;
+    justify-content: center;
+    padding-bottom: 10px;
+}
+
+.group-calendar-header-bar h2{
+    font-weight: bold;
+}
+
+.group-calendar-nav-btn{
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.group-container {
+  overflow-y: auto;
+  max-height: calc(100dvh - var(--group-header-height) - var(--group-tabbar-height));
+}
+.selection-box {
+  pointer-events: none;
+  z-index: 2;
+}
+
+.floating-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+  border: none;
+  z-index: 1000;
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); */
+}
+
+.floating-button.gray {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.floating-button.orange {
+  background-color: orange;
+  cursor: pointer;
+}
+
+.floating-button.red {
+  background-color: red;
+  cursor: pointer;
+}
+
+.cell.not-allowed {
+  cursor: not-allowed;
+}
+
+.group-btn-icon {
+    width: 35px;
+    height: 35px;
+}
+
+.group-btn-section {
+    position: absolute;
+    bottom: calc(var(--tabbar-height) + 20px); 
+    right: 25px;  
+    padding: 0.75rem;   
+    border-radius: 9999px; 
+    z-index: 40;
+}

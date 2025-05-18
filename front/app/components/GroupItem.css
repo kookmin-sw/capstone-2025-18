@@ -1,0 +1,57 @@
+.group-item-container {
+  margin-bottom: 0.25rem;
+  background-color: #F9F4E9;
+  padding: 1.3rem;
+  border-radius: 40px;
+  font-weight: bold;
+}
+
+.group-item-header {
+  width: 100%;
+  padding: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-code-text {
+  font-size: 0.75rem;
+  color: #676767; 
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.group-code-mono {
+  font-family: monospace;
+}
+
+.group-item-actions {
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  /* padding: 0.5rem; */
+}
+
+.group-exit-btn {
+  background-color: #DD6250; 
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 30px;
+  
+
+  font-weight: bold;
+    width: 115px;
+    height: 40;
+}
+
+.group-move-btn {
+    width: 115px;
+    height: 40px;
+  background-color: #E8A01D; 
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 30px;
+}

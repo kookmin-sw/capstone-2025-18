@@ -1,0 +1,86 @@
+:root {
+    --header-height: 60px;
+    --tabbar-height: 80px;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  .page-container {
+    width: 320px;
+    height: 100dvh;
+    margin: 0 auto;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .page-header {
+    height: var(--header-height);
+    background-color: #202020;
+    color: #fff;
+    text-align: center;
+    padding: 12px 0;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-items: center;
+  }
+  
+  .page-header h2 {
+
+    width: 100%;
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  
+  .page-content {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    background-color: #F9F4E9;
+    height: calc(100dvh - var(--header-height) - var(--tabbar-height));
+    overflow-y: auto;
+    padding: 0.5rem;
+    padding-bottom: 0;
+  }
+  
+  .page-tabbar {
+    height: var(--tabbar-height);
+    display: flex;
+    justify-content: space-around;
+    background-color: #F9F4E9;
+    padding: 8px 0;
+    border-top: 1px solid #ACACAC;
+    align-items: center;
+  }
+  
+  .page-tabbar button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #ACACAC;
+    background: none;
+    border: none;
+  }
+
+  .tab-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+  }
+  
+  
+  .page-tabbar button span:first-child {
+    font-size: 1.25rem;
+  }
+  
+  .page-tabbar button.active {
+    color: #E8A01D;
+    font-weight: bold;
+  }
+  
