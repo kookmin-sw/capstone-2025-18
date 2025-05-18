@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUser } from "./UserContext";
 import LoginPopup from "./LoginPopup";
 
 export default function Profile({
@@ -10,7 +11,13 @@ export default function Profile({
   setShowProfilePopup, setProfileVisible,
   hasProfileImage, setHasProfileImage,
 }) {
+  const {user, setUser} = useUser();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+
+  const handleLogout = async () => {
+    await fetch("http://localhost:8080/logout", {method: "GET", credentials: "include"});
+    setUser(null);
+  };
 
   const handleLoginSuccess = () => {
     setShowLoginPopup(false);
@@ -91,13 +98,21 @@ export default function Profile({
             onChange={(e) => setNickname(e.target.value)}
             className="w-full border border-gray-400 p-2 rounded text-sm"
           />
-
-          <button
-            onClick={() => setShowLoginPopup(true)}
-            className="bg-orange-500 text-white py-2 rounded text-sm"
-          >
-            로그인
-          </button>
+          {user ? (
+            <button
+              onClick={() => handleLogout()}
+              className="bg-orange-500 text-white py-2 rounded text-sm"
+            >
+              로그아웃
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowLoginPopup(true)}
+              className="bg-orange-500 text-white py-2 rounded text-sm"
+            >
+              로그인
+            </button>
+          )}
         </div>
       </div>
 

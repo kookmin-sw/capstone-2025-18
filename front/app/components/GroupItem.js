@@ -10,16 +10,18 @@ export default function GroupItem({
   return (
     <div className="mb-1 bg-gray-800 p-2 rounded-lg">
       <button
-        onClick={() => toggleGroup(group.id)}
+        onClick={() => toggleGroup(group.groupId)}
         className="w-full p-1 flex justify-between items-center"
       >
-        {group.name} <span>{group.members}</span>
+        {group.groupName}
       </button>
-      {openGroup === group.id && (
+
+      {openGroup === group.groupId && (
         <div>
           <p className="text-xs text-gray-300 mb-2 text-center">
-            참여 코드: <span className="font-mono">{group.code}</span>
+            참여 코드: <span className="font-mono">{group.inviteCode}</span>
           </p>
+
           <div className="mt-1 flex justify-between">
             <button
               onClick={openExitPopup}

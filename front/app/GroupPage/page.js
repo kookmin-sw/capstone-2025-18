@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useUser } from "../components/UserContext";
 import GroupList from "../components/GroupList";
 import Profile from "../components/Profile";
 import GroupCreatePopup from "../components/GroupCreatePopup";
@@ -9,11 +11,10 @@ import GroupJoinPopup from "../components/GroupJoinPopup";
 import GroupExitPopup from "../components/GroupExitPopup";
 
 export default function GroupPage() {
+  const { user, loading } = useUser();
   const router = useRouter();
 
-  const [groups, setGroups] = useState([
-    { id: crypto.randomUUID(), name: "캡스톤 아자아자", members: 4, code: "ABC12" },
-  ]);
+  const [groups, setGroups] = useState([]);
   const [nickname, setNickname] = useState("그루비");
   const [hasProfileImage, setHasProfileImage] = useState(true);
   const [openGroup, setOpenGroup] = useState(null);
@@ -25,47 +26,88 @@ export default function GroupPage() {
   const [profileVisible, setProfileVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const genCode = () => {
-    let code;
-    const existingCode = groups.map((c) => c.code);
-    do {
-      code = crypto.randomUUID().replace(/-/g, "").slice(0, 5).toUpperCase();
-    } while (existingCode.includes(code));
-    return code;
-  };
+  useEffect(() => {
+    if (!loading && user) {
+      fetch("http://localhost:8080/groups", {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setGroups(data);
+        })
+        .catch((err) => {
+          console.error("그룹 목록 불러오기 실패", err);
+        });
+    }
+  }, [user, loading]);
 
   const toggleGroup = (id) => {
     setOpenGroup(openGroup === id ? null : id);
   };
 
-  const exitGroup = () => {
-    setGroups(groups.filter((group) => group.id !== openGroup));
-    setShowExitPopup(false);
-    setOpenGroup(null);
+  const exitGroup = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/groups/${openGroup}/leave`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setGroups(groups.filter((group) => group.groupId !== openGroup));
+        setShowExitPopup(false);
+        setOpenGroup(null);
+      } else {
+        alert("그룹 나가기 실패");
+      }
+    } catch (err) {
+      console.error("그룹 나가기 중 오류:", err);
+    }
   };
 
   const joinGroup = () => {
     setShowJoinPopup(false);
   };
 
-  const createGroup = () => {
-    const groupName = newGroupName.trim() || "그루비룸";
-    const newGroup = {
-      id: crypto.randomUUID(),
-      name: groupName,
-      members: 1,
-      code: genCode(),
-    };
-    setGroups([...groups, newGroup]);
-    setShowCreatePopup(false);
-    setNewGroupName("");
+  const createGroup = async () => {
+    const groupName = newGroupName.trim() || "새 그룹";
+
+    try {
+      const res = await fetch("http://localhost:8080/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupName }),
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const createdGroup = await res.json();
+        setGroups([...groups, {
+            groupId: createdGroup.groupId,
+            groupName: groupName,
+            inviteCode: createdGroup.inviteCode,
+            role: "admin",
+            joinedAt: new Date().toISOString()
+        }]);
+        setShowCreatePopup(false);
+        setNewGroupName("");
+      } else {
+        alert("그룹 생성 실패");
+      }
+    } catch (err) {
+      console.error("그룹 생성 중 오류:", err);
+    }
   };
+
 
   const moveToIndividualPage = (group) => {
     router.push(
       `/IndividualPage?id=${group.id}&name=${encodeURIComponent(group.name)}&code=${group.code}`
     );
   };
+
+  if (loading) {
+    return <div>loading...</div>;
+  }
 
   return (
     <div className="w-80 mx-auto bg-gray-500 text-white p-4 rounded-lg min-h-screen flex flex-col relative">

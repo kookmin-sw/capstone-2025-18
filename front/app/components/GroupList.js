@@ -13,7 +13,7 @@ export default function GroupList({
     <div className="max-h-[calc(100vh-120px)] overflow-y-auto touch-pan-y custom-scrollbar">
       {groups.map((group) => (
         <GroupItem
-          key={group.id}
+          key={group.groupId}
           group={group}
           openGroup={openGroup}
           toggleGroup={toggleGroup}
