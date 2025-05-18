@@ -234,6 +234,130 @@ app.get('/isAuth', (req, res) => {
   }
 });
 
+// 사용자 프로필
+app.get('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  try {
+    const user = await db.collection('user').findOne({ _id: new ObjectId(req.user._id) });
+    if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+
+    res.status(200).json({
+      nickname: user.nickname || '',
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+app.put('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  const userId = new ObjectId(req.user._id);
+  const { nickname, profileImage } = req.body;
+
+  try {
+    await db.collection('user').updateOne(
+      { _id: userId },
+      { $set: { nickname: nickname ?? '', profileImage: profileImage ?? '' } }
+    );
+    res.status(200).json({ message: '프로필 업데이트 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '프로필 업데이트 실패' });
+  }
+});
+
+// 그룹 명 변경
+app.put("/groups/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  const groupId = req.params.id;
+  const { groupName } = req.body;
+
+  if (!groupName || typeof groupName !== "string") {
+    return res.status(400).json({ message: "유효한 그룹 이름을 입력하세요." });
+  }
+
+  try {
+    const result = await db.collection("groups").updateOne(
+      { _id: new ObjectId(groupId) },
+      { $set: { groupName } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    }
+
+    res.json({ message: "그룹 이름이 성공적으로 변경되었습니다." });
+  } catch (err) {
+    console.error("그룹 이름 변경 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹장 넘기기
+app.post("/groups/:groupId/transfer", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    await db.collection("groups").updateOne(
+      { _id: groupId },
+      { $set: { ownerId: new ObjectId(targetUserId) } }
+    );
+    await db.collection("group_members").updateMany(
+      { groupId, userId: { $in: [new ObjectId(req.user._id), new ObjectId(targetUserId)] } },
+      [
+        {
+          $set: {
+            role: {
+              $cond: [
+                { $eq: ["$userId", new ObjectId(targetUserId)] },
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      ]
+    );
+    res.status(200).json({ message: "그룹장을 넘겼습니다." });
+  } catch (err) {
+    console.error("그룹장 변경 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹원 강퇴
+app.post("/groups/:groupId/kick", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    if (String(req.user._id) === String(targetUserId)) {return res.status(400).json({ message: "자기 자신은 강퇴할 수 없습니다." });}
+    const result = await db.collection("group_members").deleteOne({
+      groupId,
+      userId: new ObjectId(targetUserId)
+    });
+    if (result.deletedCount === 0) {return res.status(404).json({ message: "이미 탈퇴된 유저입니다." });}
+    res.status(200).json({ message: "해당 사용자를 강퇴했습니다." });
+  } catch (err) {
+    console.error("강퇴 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
 //생성 테스트
 app.get('/groups/create', (req, res) => {
   if (!req.user) return res.redirect('/login');
