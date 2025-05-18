@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>그룹 참여</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    input { padding: 8px; width: 300px; }
+  </style>
+</head>
+<body>
+  <h2>초대코드로 그룹 참여하기</h2>
+  <form action="/groups/join" method="POST">
+    <label for="inviteCode">초대코드:</label><br/>
+    <input type="text" name="inviteCode" required /><br/><br/>
+    <button type="submit">참여하기</button>
+  </form>
+</body>
+</html>

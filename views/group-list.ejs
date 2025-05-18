@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>내 그룹 리스트</title>
+</head>
+<body>
+  <h2>내가 속한 그룹</h2>
+
+  <% if (groups.length === 0) { %>
+    <p>참여한 그룹이 없습니다.</p>
+  <% } else { %>
+    <ul>
+      <% groups.forEach(group => { %>
+        <li>
+          <%= group.groupName %> 
+          (<%= group.role %>)
+          <form action="/groups/<%= group.groupId %>/leave" method="POST" style="display:inline;">
+            <button type="submit">나가기</button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>공유할 태그 선택</title>
+</head>
+<body>
+  <h1>공유할 태그 선택</h1>
+  <form action="/groups/<%= groupId %>/share-tags" method="POST">
+    <% allTags.forEach(tag => { %>
+      <div>
+        <input type="checkbox" name="tagIds" value="<%= tag._id %>"
+          <% if (sharedTagIds.includes(tag._id.toString())) { %> checked <% } %> />
+        <span style="color:<%= tag.color %>;">●</span> <%= tag.name %>
+      </div>
+    <% }) %>
+    <button type="submit">저장</button>
+  </form>
+</body>
+</html>

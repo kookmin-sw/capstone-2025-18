@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>게시글 수정</title>
+</head>
+<body>
+  <h2>✏️ 게시글 수정</h2>
+  <form action="/posts/<%= post._id %>?_method=PUT" method="POST">
+    <label>제목:</label><br>
+    <input type="text" name="title" value="<%= post.title %>" required><br><br>
+
+    <label>내용:</label><br>
+    <textarea name="content" rows="5" cols="40" required><%= post.content %></textarea><br><br>
+
+    <label>
+      <input type="checkbox" name="is_notice" value="true" <%= post.is_notice ? 'checked' : '' %> > 공지글
+    </label><br><br>
+
+    <button type="submit">수정 완료</button>
+  </form>
+</body>
+</html>
