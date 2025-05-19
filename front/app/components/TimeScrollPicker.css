@@ -1,0 +1,29 @@
+
+.time-scroll-wrapper {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.time-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-column label {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.time-column select {
+  width: 80px;
+  height: 120px;
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 8px;
+  text-align: center;
+  overflow-y: scroll;
+}
