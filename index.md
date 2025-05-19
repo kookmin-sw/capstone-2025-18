@@ -1,6 +1,6 @@
 # Tm:ta
 
-<img src="/public/header.png" style="width: 100%;" />
+<img src="/header.png" style="width: 100%;" />
 
 
 ---
@@ -14,7 +14,7 @@
 - **목표**: 겹치지 않는 일정 속, 함께할 틈을 찾아드립니다.
 
   
-<img src="/public/poster.jpg" style="width: 100%;" />
+<img src="/poster.jpg" style="width: 100%;" />
 
 ---
 
