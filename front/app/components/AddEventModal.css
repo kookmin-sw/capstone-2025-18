@@ -24,6 +24,13 @@
 
   text-align: center;
 }
+.modal-content h4 {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
 
 .modal-content label {
   display: block;
@@ -32,14 +39,21 @@
   font-weight: bold;
 }
 
-.modal-content input,
-.modal-content select {
+.modal-content input {
   width: 100%;
   padding: 8px;
   margin-top: 6px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  font-size: 14px;
+  font-size: 12px;
+}
+.modal-content select {
+  width: 80%;
+  padding: 8px;
+  margin-top: 6px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 12px;
 }
 
 .day-selector {
@@ -150,7 +164,7 @@
 .add-event-time {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  /* gap: 16px; */
   margin-top: 16px;
 }
 .add-event-time .time-block {
@@ -173,17 +187,107 @@
 .add-event-time-start {
   display: flex;
   flex-direction: column;
-  width: 130px;
+  width: 140px;
   text-align: center;
 }
 
 .add-event-time-end {
   display: flex;
   flex-direction: column;
-  width: 130px;
+  width: 140px;
   text-align: center;
 }
 
 .tag-options{
   margin-top: 20px;
+}
+
+.calendar-row {
+  margin-bottom: 12px;
+}
+
+.time-toggle {
+  margin: 10px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: row;
+  font-size: 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-toggle label{
+  margin: 0;
+}
+
+.time-toggle button {
+  border: solid #aaa 1px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.time-block {
+  flex: 1;
+  text-align: center;
+}
+
+.time-selector {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.time-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #aaa;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modal-buttons button {
+  padding: 6px 12px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #eee;
+}
+
+.modal-buttons button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+.modal-input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.event-modal-scroll{
+  height: 479px;
+  overflow-y: scroll;
+  scrollbar-width: 0;
 }

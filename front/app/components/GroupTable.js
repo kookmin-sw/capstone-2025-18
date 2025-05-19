@@ -1,39 +1,69 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import './GroupTable.css';
 import './TimeTable.css';
 import MiniCalendar from './MiniCalendar';
+import api from '@/lib/api';
 
 const hours = Array.from({ length: 24 }, (_, i) => `${i}`);
 const days = ['일', '월', '화', '수', '목', '금', '토'];
 const heartSrc = `/icons/heart.png`;
-const TIME_BLOCK_LENGTH = 3;
 
-const UNAVAILABLE_BLOCKS = [
-  { day: 1, start: 10, end: 13 },
-  { day: 2, start: 14, end: 16 },
-  { day: 3, start: 10, end: 16 },
-  { day: 4, start: 0, end: 2 },
-  { day: 5, start: 0, end: 2 },
-];
-
-const GroupTable = () => {
+const GroupTable = ({ groupId, blockLength = 1 }) => {
   const [selectedDate, setSelectedDate] = useState(moment());
   const [fixedSelection, setFixedSelection] = useState(null);
   const [tempSelection, setTempSelection] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarPosition, setCalendarPosition] = useState({ x: 0, y: 0 });
+  const [unavailableBlocks, setUnavailableBlocks] = useState([]);
+  const [voteActive, setVoteActive] = useState(false);
+  const [myVote, setMyVote] = useState(null);
 
-  const handleDateClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setCalendarPosition({ x: rect.left, y: rect.bottom });
-    setShowCalendar(!showCalendar);
-  };
+  useEffect(() => {
+    if (!groupId) return;
+
+    const fetchUnavailableBlocks = async () => {
+      try {
+        const start = selectedDate.clone().startOf('week').format('YYYY-MM-DD');
+        const res = await api.get(`/groups/${groupId}/weekly-schedules?start=${start}`);
+        const blocks = res.data.map(item => {
+          const start = moment(item.start);
+          const end = moment(item.end);
+          return {
+            day: start.day(),
+            start: start.hour(),
+            end: end.hour()
+          };
+        });
+        setUnavailableBlocks(blocks);
+      } catch (err) {
+        console.error('불가능 시간 로딩 실패', err);
+      }
+    };
+
+    const fetchVoteStatus = async () => {
+      try {
+        const res = await api.get(`/groups/${groupId}/vote/status`);
+        if (res.status === 200) {
+          setVoteActive(true);
+          if (res.data.myVote) {
+            const d = moment(res.data.myVote.start);
+            setFixedSelection({ day: d.day(), hour: d.hour() });
+          }
+        }
+      } catch {
+        setVoteActive(false);
+      }
+    };
+
+    fetchUnavailableBlocks();
+    fetchVoteStatus();
+  }, [groupId, selectedDate]);
 
   const getUnavailableRangeMap = () => {
     const map = {};
-    UNAVAILABLE_BLOCKS.forEach(({ day, start, end }) => {
+    unavailableBlocks.forEach(({ day, start, end }) => {
       for (let h = start; h < end; h++) {
         if (!map[day]) map[day] = [];
         map[day].push(h);
@@ -44,7 +74,7 @@ const GroupTable = () => {
 
   const isStartAvailable = (dIdx, hIdx) => {
     const unavailableMap = getUnavailableRangeMap();
-    for (let i = 0; i < TIME_BLOCK_LENGTH; i++) {
+    for (let i = 0; i < blockLength; i++) {
       if (unavailableMap[dIdx]?.includes(hIdx + i)) return false;
       if (hIdx + i >= 24) return false;
     }
@@ -67,14 +97,14 @@ const GroupTable = () => {
     }
     if (fixedSelection && fixedSelection.day === dIdx) {
       const top = fixedSelection.hour;
-      const bottom = fixedSelection.hour + TIME_BLOCK_LENGTH - 1;
+      const bottom = fixedSelection.hour + blockLength - 1;
       if (hIdx === top) classes.push('fixed-radius-top');
       else if (hIdx === bottom) classes.push('fixed-radius-bottom');
       else if (hIdx > top && hIdx < bottom) classes.push('fixed-radius-middle');
     }
     if (tempSelection && tempSelection.day === dIdx) {
       const top = tempSelection.hour;
-      const bottom = tempSelection.hour + TIME_BLOCK_LENGTH - 1;
+      const bottom = tempSelection.hour + blockLength - 1;
       if (hIdx === top) classes.push('selected-border-top');
       else if (hIdx === bottom) classes.push('selected-border-bottom');
       else if (hIdx > top && hIdx < bottom) classes.push('selected-border-middle');
@@ -84,29 +114,51 @@ const GroupTable = () => {
 
   const handleCellClick = (dIdx, hIdx) => {
     if (!isStartAvailable(dIdx, hIdx)) return;
-    if (getUnavailableRangeMap()[dIdx]?.includes(hIdx)) return;
-    if (fixedSelection && fixedSelection.day === dIdx && hIdx >= fixedSelection.hour && hIdx < fixedSelection.hour + TIME_BLOCK_LENGTH) {
+    const map = getUnavailableRangeMap();
+    if (map[dIdx]?.includes(hIdx)) return;
+    if (fixedSelection && fixedSelection.day === dIdx && hIdx >= fixedSelection.hour && hIdx < fixedSelection.hour + blockLength) {
       setFixedSelection(null);
       setTempSelection(null);
       return;
     }
-    if (fixedSelection) {
-      setTempSelection({ day: dIdx, hour: hIdx });
-    } else {
-      setTempSelection({ day: dIdx, hour: hIdx });
-    }
+    setTempSelection({ day: dIdx, hour: hIdx });
   };
 
-  const confirmSelection = () => {
-    if (tempSelection) {
+  const confirmSelection = async () => {
+    if (!tempSelection || !groupId) return;
+    if (!voteActive) {
+      alert('투표가 아직 시작되지 않았습니다. 그룹장이 투표를 시작해야 합니다.');
+      return;
+    }
+    try {
+      const weekStart = selectedDate.clone().startOf('week');
+      const selected = weekStart.clone().add(tempSelection.day, 'days').set({ hour: tempSelection.hour, minute: 0, second: 0 });
+      const end = selected.clone().add(blockLength, 'hours');
+
+      await api.post(`/groups/${groupId}/vote`, {
+        start: selected.toISOString(),
+        end: end.toISOString()
+      });
+
       setFixedSelection(tempSelection);
       setTempSelection(null);
+    } catch (err) {
+      if (existing) {
+        return res.status(200).json({ message: "이미 진행 중인 투표가 있습니다.", alreadyStarted: true });
+      } else {
+        console.error('선택 전송 실패', err);
+      }
     }
   };
 
-  const cancelSelection = () => {
-    setFixedSelection(null);
-    setTempSelection(null);
+  const cancelSelection = async () => {
+    try {
+      await api.delete(`/groups/${groupId}/vote/delete`);
+      setFixedSelection(null);
+      setTempSelection(null);
+    } catch (err) {
+      console.error('취소 실패', err);
+    }
   };
 
   const renderActionButton = () => {
@@ -155,6 +207,12 @@ const GroupTable = () => {
     setSelectedDate(prev => prev.clone().add(1, 'week'));
   };
 
+  const handleDateClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCalendarPosition({ x: rect.left, y: rect.bottom });
+    setShowCalendar(!showCalendar);
+  };
+
   return (
     <div className="timetable-container group-container">
       <div className="group-calendar-header-bar">
@@ -165,13 +223,13 @@ const GroupTable = () => {
         {showCalendar && (
           <div
             className="calendar-popup"
-            style={{ position: 'absolute', top: calendarPosition.y}}
+            style={{ position: 'absolute', top: calendarPosition.y }}
           >
             <MiniCalendar
               currentDate={selectedDate}
               onSelect={(date) => {
                 setSelectedDate(date);
-                setShowCalendar(true);
+                setShowCalendar(false);
               }}
               onClose={() => setShowCalendar(false)}
             />

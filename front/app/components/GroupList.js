@@ -1,5 +1,4 @@
 "use client";
-
 import GroupItem from "./GroupItem";
 
 export default function GroupList({
@@ -18,7 +17,7 @@ export default function GroupList({
           openGroup={openGroup}
           toggleGroup={toggleGroup}
           moveToIndividualPage={moveToIndividualPage}
-          openExitPopup={openExitPopup}
+          openExitPopup={() => openExitPopup(group.id)}
         />
       ))}
     </div>
