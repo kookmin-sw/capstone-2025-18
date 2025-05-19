@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoginPopup from "./LoginPopup";
+import api from "@/lib/api";
 
 export default function Profile({
   visible,
@@ -12,11 +13,24 @@ export default function Profile({
 }) {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/me");
+        if (res.data.username) setNickname(res.data.username);
+      } catch (err) {
+        console.error("프로필 불러오기 실패", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const handleLoginSuccess = () => {
     setShowLoginPopup(false);
   };
 
   const handleLoginFail = () => {
+    // 로그인 실패 처리
   };
 
   return (
@@ -82,7 +96,7 @@ export default function Profile({
             프로필 사진 지우기
           </button>
         </div>
-        
+
         <div className="flex flex-col gap-3 mb-4 px-2">
           <input
             type="text"
@@ -97,7 +111,7 @@ export default function Profile({
             className="btext-white py-2 rounded text-sm"
             style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
           >
-            로그인
+            변경 사항 저장
           </button>
         </div>
       </div>

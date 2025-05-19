@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const { MongoClient, ObjectId } = require('mongodb')
 const methodOverride = require('method-override')
-const bcrypt = require('bcrypt') 
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 require('dotenv').config() 
 
@@ -14,6 +14,7 @@ app.use(methodOverride('_method'))
 
 let db;
 const url = process.env.DB_URL;
+const FRONT_BASE_URL = "http://localhost:3000"; //프론트 추후 주소 수정
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('tmta');
@@ -58,17 +59,16 @@ app.get('/', (req, res) => {
   res.render('index.ejs', { user: req.user })
 }) 
 
-passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) => {
-    let result = await db.collection('user').findOne({ username : 입력한아이디})
-    if (!result) {
-      return cb(null, false, { message: '아이디 DB에 없음' })
-    }
-    if (await bcrypt.compare(입력한비번, result.password)) {
-      return cb(null, result)
-    } else {
-      return cb(null, false, { message: '비번불일치' });
-    }
-  }))
+passport.use(new LocalStrategy(async (username, password, done) => {
+  const user = await db.collection('user').findOne({ username });
+  if (!user) return done(null, false, { message: '아이디 없음' });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return done(null, false, { message: '비밀번호 틀림' });
+
+  return done(null, user);
+}));
+
 
 // KakaoStrategy 설정
 passport.use(new KakaoStrategy({
@@ -157,63 +157,90 @@ app.get('/login', (req, res)=>{
     //console.log(req.user)
     res.render('login.ejs')
 }) 
+// 로그인 API (로컬)
+app.post('/auth/login', (req, res, next) => {
+  passport.authenticate('local', (error, user, info) => {
+    if (error) return res.status(500).json(error);
+    if (!user) return res.status(401).json({ message: info.message });
 
-app.post('/login', async (req, res, next) => {
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      res.status(200).json({ message: '로그인 성공' });
+    });
+  })(req, res, next);
+});
 
-    passport.authenticate('local', (error, user, info) => {
-        if (error) return res.status(500).json(error)
-        if (!user) return res.status(401).json(info.message)
-        req.logIn(user, (err) => {
-          if (err) return next(err)
-          res.redirect('/')
-        })
-    })(req, res, next)
-}) 
+// 회원가입 API (로컬)
+app.post('/auth/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    const existing = await db.collection('user').findOne({
+      $or: [ { username }, { email } ]
+    });
+    if (existing) return res.status(409).json({ message: '이미 존재하는 사용자입니다.' });
+
+    const hash = await bcrypt.hash(password, 10);
+    await db.collection('user').insertOne({
+      username,
+      email,
+      password: hash
+    });
+
+    res.status(200).json({ message: '회원가입 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '회원가입 실패' });
+  }
+});
+
+// 현재 로그인된 사용자 정보
+app.get('/me', (req, res) => {
+  if (!req.user) return res.status(401).json({ message: '로그인 안됨' });
+  res.status(200).json({
+    id: req.user._id,
+    username: req.user.username
+  });
+});
+
+// ✅ 소셜 로그인 라우터 추가 (프론트에서 요청 시 404 방지)
+
+// 카카오
+app.get('/auth/kakao', passport.authenticate('kakao'));
+app.get('/auth/kakao/callback', passport.authenticate('kakao', {
+  failureRedirect: '/login'
+}), (req, res) => {
+  res.redirect(FRONT_BASE_URL);
+});
+
+// 구글
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
+app.get('/auth/google/callback', passport.authenticate('google', {
+  failureRedirect: '/login'
+}), (req, res) => {
+  res.redirect(FRONT_BASE_URL);
+});
+
+// 네이버
+app.get('/auth/naver', passport.authenticate('naver'));
+app.get('/auth/naver/callback', passport.authenticate('naver', {
+  failureRedirect: '/login'
+}), (req, res) => {
+  res.redirect(FRONT_BASE_URL);
+});
+
+// 로그아웃
+app.post('/auth/logout', (req, res) => {
+  req.logout(err => {
+    if (err) return res.status(500).json({ message: '로그아웃 실패' });
+    res.status(200).json({ message: '로그아웃 완료' });
+  });
+});
+
 
 app.get('/register', (req, res)=>{
     res.render('register.ejs')
   })
-
-app.post('/register', async (req, res) => {
-    let hash = await bcrypt.hash(req.body.password, 10) 
-    await db.collection('user').insertOne({
-      username : req.body.username,
-      password : hash
-    })
-    res.redirect('/')
-})
-
-// 카카오 로그인 시작
-app.get('/auth/kakao', passport.authenticate('kakao'));
-
-// 카카오 로그인 콜백
-app.get('/auth/kakao/callback', passport.authenticate('kakao', {
-  failureRedirect: '/login'
-}), (req, res) => {
-  res.redirect('/');
-});
-
-//구글 로그인 시작
-app.get('/auth/google', passport.authenticate('google', {
-  scope: ['profile']
-}));
-
-//구글 로그인 완료 콜백
-app.get('/auth/google/callback', passport.authenticate('google', {
-  failureRedirect: '/login'
-}), (req, res) => {
-  res.redirect('/');
-});
-
-// 네이버 로그인 시작
-app.get('/auth/naver', passport.authenticate('naver'));
-
-// 네이버 완료 콜백
-app.get('/auth/naver/callback', passport.authenticate('naver', {
-  failureRedirect: '/login'
-}), (req, res) => {
-  res.redirect('/');
-});
 
 app.get('/logout', (req, res) => {
   req.logout(err => {
@@ -221,6 +248,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/')  // 로그아웃 후 리디렉션
   })
 })
+
 
 //생성 테스트
 app.get('/groups/create', (req, res) => {
@@ -507,6 +535,32 @@ app.get('/join/:inviteCode', async (req, res) => {
     res.status(500).send('초대코드 처리 중 오류 발생');
   }
 });
+
+// 그룹 이름 수정 API
+app.put('/groups/:groupId', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+  const groupId = new ObjectId(req.params.groupId);
+  const { groupName } = req.body;
+
+  try {
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) return res.status(404).send('그룹을 찾을 수 없습니다.');
+    if (group.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).send('그룹장만 수정할 수 있습니다.');
+    }
+
+    await db.collection('groups').updateOne(
+      { _id: groupId },
+      { $set: { groupName } }
+    );
+
+    res.status(200).json({ message: '그룹 이름 수정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('그룹 이름 수정 실패');
+  }
+});
+
 
 //초대링크 테스트
 app.get('/groups/:id/invite-page', async (req, res) => {

@@ -1,7 +1,7 @@
 "use client";
 import './GroupPopup.css';
 
-export default function GroupCreatePopup({ value, onChange, onCancel, onCreate }) {
+export default function  ({ value, onChange, onCancel, onCreate }) {
   return (
     <div className="popup-overlay">
       <div className="popup-box">
