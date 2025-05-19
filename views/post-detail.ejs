@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title><%= post.title %></title>
+</head>
+<body>
+  <h2><%= post.title %> <% if (post.is_notice) { %><span style="color:red;">[공지]</span><% } %></h2>
+  <p><%= post.content %></p>
+  <small>작성일: <%= new Date(post.created_at).toLocaleString() %></small>
+  <% if (post.updated_at && post.updated_at !== post.created_at) { %>
+    <small> (수정됨: <%= new Date(post.updated_at).toLocaleString() %>)</small>
+  <% } %>
+
+  <hr>
+
+  <h3>💬 댓글</h3>
+  <% if (comments.length === 0) { %>
+    <p>댓글이 없습니다.</p>
+  <% } else { %>
+    <ul>
+      <% comments.forEach(comment => { %>
+        <li>
+          <%= comment.content %>
+          <br>
+          <small><%= new Date(comment.created_at).toLocaleString() %></small>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+  <form action="/posts/<%= post._id %>/comments" method="POST">
+    <textarea name="content" rows="3" cols="40" placeholder="댓글 작성..." required></textarea><br>
+    <button type="submit">댓글 등록</button>
+  </form>
+
+  <p><a href="/groups/<%= post.group_id %>/posts/list">← 게시판으로 돌아가기</a></p>
+</body>
+</html>
+

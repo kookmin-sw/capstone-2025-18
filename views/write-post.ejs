@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>게시글 작성</title>
+</head>
+<body>
+  <h2>📌 게시글 작성</h2>
+  <form action="/groups/<%= groupId %>/posts" method="POST">
+    <label>제목:</label><br>
+    <input type="text" name="title" required><br><br>
+
+    <label>내용:</label><br>
+    <textarea name="content" rows="5" cols="40" required></textarea><br><br>
+
+    <label>
+      <input type="checkbox" name="is_notice" value="true"> 공지글로 등록
+    </label><br><br>
+
+    <button type="submit">등록</button>
+  </form>
+</body>
+</html>

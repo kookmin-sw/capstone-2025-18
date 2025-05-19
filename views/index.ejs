@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>메인 페이지</title>
+</head>
+<body>
+  <% if (user) { %>
+    <p><%= user.username %>님 안녕하세요!</p>
+    <a href="/logout">로그아웃</a>
+  <% } else { %>
+    <a href="/login">로그인</a>
+  <% } %>
+</body>
+</html>

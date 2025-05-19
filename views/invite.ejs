@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title><%= groupName %> 초대링크</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    input { width: 100%; padding: 8px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>👥 <%= groupName %> 초대 링크</h2>
+
+  <input type="text" id="inviteUrl" value="<%= inviteUrl %>" readonly />
+  <button onclick="copy()">복사하기</button>
+
+  <script>
+    function copy() {
+      const input = document.getElementById('inviteUrl');
+      input.select();
+      document.execCommand('copy');
+      alert('초대 링크가 복사되었습니다!');
+    }
+  </script>
+</body>
+</html>

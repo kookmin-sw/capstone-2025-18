@@ -5,7 +5,7 @@ import './AddEventModal.css';
 const COLOR_PALETTE = ['#d3d3d3', '#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#9775fa', '#f783ac'];
 const DAYS = ['일','월', '화', '수', '목', '금', '토', ];
 
-const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultStart, defaultEnd, defaultTitle, defaultTag = null }) => {
+const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultStart, defaultEnd, defaultTitle, defaultStartMinute, defaultEndMinute, defaultTag = null }) => {
   const [title, setTitle] = useState('');
   const [daysSelected, setDaysSelected] = useState([]);
   const [start, setStart] = useState(defaultStart ?? 0);
@@ -14,6 +14,10 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
   const [showTagCreator, setShowTagCreator] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(COLOR_PALETTE[0]);
+
+  const [startMinute, setStartMinute] = useState(defaultStartMinute ?? 0);
+  const [endMinute, setEndMinute] = useState(defaultEndMinute ?? 0);
+
 
   useEffect(() => {
     if (typeof defaultTitle === 'string') setTitle(defaultTitle);
@@ -31,11 +35,17 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
     }
   }, [defaultTag, tags]);
 
-  const handleSubmit = () => {
-    if (!title || start >= end || daysSelected.length === 0) return;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title || start > end || (start == end)&&(startMinute >= endMinute) || daysSelected.length === 0) {
+      // console.log('조건 불만족으로 종료');
+      return;};
     daysSelected.forEach(day => {
-      onSave({ title, day, startHour: start, endHour: end, tag: tags[tagIndex] });
-    });
+      onSave({ title, day, startHour: start, startMinute: startMinute, endHour: end, endMinute: endMinute, tag: tags[tagIndex], });
+
+      // console.log("조건 충족",title, day, start, startMinute, end, endMinute,);
+
+    })
     onClose();
   };
 
@@ -59,9 +69,22 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
   const isEditing = typeof defaultTitle === 'string' && defaultTitle.trim().length > 0;
   const isFromDrag = defaultDay === 'drag';
 
+  const icon_check_black = `/icons/check_black.png`;
+  const icon_cancel_black = `/icons/cancel_black.png`;
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
+
+        <div className="modal-actions">
+          <button onClick={onClose}>
+            <img src={icon_cancel_black} className='modal-close-btn'/>
+          </button>
+          <button onClick={handleSubmit}>
+            <img src={icon_check_black} className='modal-submit-btn' />
+          </button>
+        </div>
+
         <h3>{isEditing ? '일정 수정' : '일정 추가'}</h3>
 
         <label>제목</label>
@@ -83,20 +106,43 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
             </div>
           </>
         )}
+        
+        <div className='add-event-time'> 
+          <div className='add-event-time-start'>
+            <label>시작 시간</label>
 
-        <label>시작 시간</label>
-        <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
-          {Array.from({ length: 25 }, (_, i) => (
-            <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </select>
+            <div className="time-selector">
+              <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
+                {Array.from({ length: 25 }, (_, i) => (
+                    <option key={i} value={i}>{i}시</option>
+                ))}
+              </select>
+              <select value={startMinute} onChange={(e) => setStartMinute(Number(e.target.value))}>
+                {[0, 10, 20, 30, 40, 50].map((m) => (
+                  <option key={m} value={m}>{m}분</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className='add-event-time-end'>
+            <label>종료 시간</label>
+            <div className="time-selector">
+              <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
+                {Array.from({ length: 25 }, (_, i) => (
+                  <option key={i} value={i}>{i}시</option>
+                ))}
+              </select>
+              <select value={endMinute} onChange={(e) => setEndMinute(Number(e.target.value))}>
+                {[0, 10, 20, 30, 40, 50].map((m) => (
+                  <option key={m} value={m}>{m}분</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
 
-        <label>종료 시간</label>
-        <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
-          {Array.from({ length: 25 }, (_, i) => (
-            <option key={i} value={i}>{`${i.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </select>
+        </div>
 
         <div className="tag-options">
           {tags.map((tag, i) => (
@@ -132,15 +178,12 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
             </div>
             <div className="modal-actions">
               <button onClick={handleAddNewTag}>태그 생성</button>
-              <button onClick={() => setShowTagCreator(false)}>취소</button>
+              <button onClick={() => setShowTagCreator(false)}>
+                취소
+              </button>
             </div>
           </div>
         )}
-
-        <div className="modal-actions">
-          <button onClick={handleSubmit}>확인</button>
-          <button onClick={onClose}>취소</button>
-        </div>
       </div>
     </div>
   );

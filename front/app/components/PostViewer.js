@@ -1,4 +1,5 @@
 "use client";
+import './GroupPopup.css';
 
 export default function PostViewer({
   post,
@@ -26,9 +27,9 @@ export default function PostViewer({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex justify-center items-center">
-      <div className="bg-white text-black p-5 rounded-lg w-80 space-y-4 max-h-[80vh] overflow-y-auto">
-        <h3 className="text-lg font-bold">{post.title}</h3>
+    <div className="popup-overlay">
+      <div className="popup-box">
+        <h3 className="popup-title">{post.title}</h3>
         <p className="text-sm whitespace-pre-wrap">{post.content}</p>
 
         {post.isVote && post.voteOptions && (
@@ -46,7 +47,7 @@ export default function PostViewer({
                   >
                     <input
                       type="checkbox"
-                      className="accent-blue-500"
+                      className="popup-input"
                       checked={selectedVotes.includes(option.id)}
                       onChange={() => handleVoteChange(option.id)}
                     />
@@ -70,9 +71,9 @@ export default function PostViewer({
         )}
 
         <div className="flex justify-between">
-          <button onClick={onDelete} className="bg-red-500 text-white px-4 py-1 rounded">삭제</button>
-          <button onClick={onEdit} className="bg-yellow-500 text-white px-4 py-1 rounded">수정</button>
-          <button onClick={onClose} className="bg-gray-400 text-white px-4 py-1 rounded">닫기</button>
+          <button onClick={onDelete} className="popup-btn cancel">삭제</button>
+          <button onClick={onEdit} className="popup-btn confirm">수정</button>
+          <button onClick={onClose} className="popup-btn">닫기</button>
         </div>
       </div>
     </div>

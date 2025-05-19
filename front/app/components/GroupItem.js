@@ -1,4 +1,5 @@
 "use client";
+import './GroupItem.css';
 
 export default function GroupItem({
   group,
@@ -8,28 +9,28 @@ export default function GroupItem({
   openExitPopup,
 }) {
   return (
-    <div className="mb-1 bg-gray-800 p-2 rounded-lg">
+    <div className="group-item-container">
       <button
         onClick={() => toggleGroup(group.id)}
-        className="w-full p-1 flex justify-between items-center"
+        className="group-item-header"
       >
         {group.name} <span>{group.members}</span>
       </button>
       {openGroup === group.id && (
         <div>
-          <p className="text-xs text-gray-300 mb-2 text-center">
-            참여 코드: <span className="font-mono">{group.code}</span>
+          <p className="group-code-text">
+            참여 코드: <span className="group-code-mono">{group.code}</span>
           </p>
-          <div className="mt-1 flex justify-between">
+          <div className="group-item-actions">
             <button
-              onClick={openExitPopup}
-              className="bg-red-500 text-white px-2 py-1 text-xs rounded"
+              onClick={() => openExitPopup(group.id)}
+              className="group-exit-btn"
             >
               그룹에서 나가기
             </button>
             <button
               onClick={() => moveToIndividualPage(group)}
-              className="bg-yellow-500 text-white px-2 py-1 text-xs rounded"
+              className="group-move-btn"
             >
               그룹 페이지로 이동
             </button>

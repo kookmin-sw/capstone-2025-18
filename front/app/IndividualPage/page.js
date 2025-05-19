@@ -1,111 +1,230 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
 import PostEditor from "../components/PostEditor";
 import PostList from "../components/PostList";
 import PostViewer from "../components/PostViewer";
-import Timetable from "../components/TimeTable";
+import GroupTable from "../components/GroupTable";
+import "./page.css";
 
 export default function IndividualPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const groupId = searchParams.get("id") || "error";
-  const groupName = searchParams.get("name") || "error";
-  const groupCode = searchParams.get("code") || "error";
+  const [groupName, setGroupName] = useState("");
+  const [groupCode, setGroupCode] = useState("");
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [blockLength, setBlockLength] = useState(1);
+  const [durationHours, setDurationHours] = useState(1);
+  const [durationMinutes, setDurationMinutes] = useState(0);
 
   const [selectedTab, setSelectedTab] = useState("timetable");
   const [showSettingPopup, setShowSettingPopup] = useState(false);
-  const [editGroupName, setEditGroupName] = useState(groupName);
+  const [editGroupName, setEditGroupName] = useState("");
   const [posts, setPosts] = useState([]);
   const [showWritePopup, setShowWritePopup] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedVotes, setSelectedVotes] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const icon_pencil = `/icons/pencil.png`;
+  const icon_setting = `/icons/setting.png`;
+  const icon_back = `/icons/back.png`;
+  const icon_back_black = `/icons/back-black.png`;
+
+  useEffect(() => {
+    if (groupId === "error") return;
+    const fetchGroup = async () => {
+      try {
+        const res = await api.get(`/groups/${groupId}`);
+        setGroupName(res.data.groupName);
+        setEditGroupName(res.data.groupName);
+        setGroupCode(res.data.inviteCode);
+        setGroupMembers(res.data.members ?? []);
+        const hours = res.data.meetingDuration?.hours || 1;
+        const minutes = res.data.meetingDuration?.minutes || 0;
+        setBlockLength(hours);
+        setDurationHours(hours);
+        setDurationMinutes(minutes);
+      } catch (err) {
+        console.error("그룹 정보 불러오기 실패", err);
+      }
+    };
+
+    const fetchPosts = async () => {
+      try {
+        const res = await api.get(`/groups/${groupId}/posts/list`);
+        setPosts(res.data);
+      } catch (err) {
+        console.error("게시글 목록 불러오기 실패", err);
+      }
+    };
+
+    fetchGroup();
+    fetchPosts();
+  }, [groupId]);
+
+  const handleGroupNameSave = async () => {
+    try {
+      setGroupName(editGroupName);
+      await api.put(`/groups/${groupId}`, { groupName: editGroupName });
+      // console.log(groupName, editGroupName)
+    } catch (err) {
+      console.error("그룹 이름 저장 실패", err);
+    }
+  };
+
+  const handleDurationSave = async () => {
+    try {
+      await api.put(`/groups/${groupId}/meeting-duration`, {
+        hours: durationHours,
+        minutes: durationMinutes
+      });
+      setBlockLength(durationHours);
+      alert("회의 길이 저장 완료");
+      setShowSettingPopup(false);
+    } catch (err) {
+      console.error("회의 길이 저장 실패", err);
+    }
+  };
+
+  const handleStartVote = async () => {
+    if (voteActive) {
+      alert("이미 투표가 시작되었습니다.");
+      return;
+    }
+    try {
+      await api.post(`/groups/${groupId}/vote/start`);
+      alert("투표가 시작되었습니다.");
+      setVoteActive(true);
+    } catch (err) {
+      const msg = err.response?.data?.message;
+      if (msg === "이미 진행 중인 투표가 있습니다.") {
+        alert("이미 투표가 시작되어 있습니다.");
+        setVoteActive(true);
+      } else {
+        console.error("투표 시작 실패", err);
+        alert("투표 시작 중 오류가 발생했습니다.");
+      }
+    }
+  };
+
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/posts/${selectedPost.id}`);
+      setPosts(posts.filter((post) => post.id !== selectedPost.id));
+      setSelectedPost(null);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error("게시글 삭제 실패", err);
+    }
+  };
 
   return (
-    <div className="relative w-80 mx-auto min-h-screen bg-neutral-100 flex flex-col">
-      <div className="bg-black text-white flex items-center justify-between px-3 py-2 rounded-b-lg">
-        <button onClick={() => router.back()}>◀</button>
-        <h2 className="text-sm font-bold">{editGroupName}</h2>
-        <button onClick={() => setShowSettingPopup(true)}>⚙</button>
+    <div className="relative w-80 mx-auto mx-h-screen bg-neutral-100 flex flex-col">
+      <div className="group-header">
+        <button onClick={() => router.back()}>
+          <img src={icon_back} className="group-header-icon" />
+        </button>
+        <h2 className="text-sm font-bold">{groupName}</h2>
+        <button onClick={() => setShowSettingPopup(true)}>
+          <img src={icon_setting} className="group-header-icon" />
+        </button>
       </div>
 
-      <div className="flex-grow relative">
+      <div className="group-content">
         {selectedTab === "timetable" ? (
-          <Timetable />
+          <GroupTable groupId={groupId} blockLength={blockLength} />
         ) : (
           <PostList posts={posts} onSelect={(post) => setSelectedPost(post)} />
         )}
       </div>
 
       {selectedTab === "board" && (
-        <button
-          className="absolute bottom-14 right-2 bg-orange-500 text-white text-xl p-3 rounded-full shadow-md z-40"
-          onClick={() => setShowWritePopup(true)}
-        >
-          ✏️
+        <button className="group-pencil-back" onClick={() => setShowWritePopup(true)}>
+          <img src={icon_pencil} />
         </button>
       )}
 
-      <div className="flex justify-around bg-white py-2 rounded-t-lg border-t border-gray-300">
+      <div className="group-tabbar">
         <button
           onClick={() => setSelectedTab("timetable")}
-          className={`flex flex-col items-center text-xs ${
-            selectedTab === "timetable" ? "text-orange-500 font-bold" : "text-gray-400"
-          }`}
+          className={`${selectedTab === "timetable" ? "active" : ""}`}
         >
-          📅 <span>시간표</span>
+          <img
+            src={selectedTab === "timetable" ? "/icons/calendar-active.png" : "/icons/calendar.png"}
+            alt="시간표"
+            className="tab-icon"
+          />
+          <span>시간표</span>
         </button>
+
         <button
           onClick={() => setSelectedTab("board")}
-          className={`flex flex-col items-center text-xs ${
-            selectedTab === "board" ? "text-orange-500 font-bold" : "text-gray-400"
-          }`}
+          className={`${selectedTab === "board" ? "active" : ""}`}
         >
-          📢 <span>게시판</span>
+          <img
+            src={selectedTab === "board" ? "/icons/board-active.png" : "/icons/board.png"}
+            alt="게시판"
+            className="tab-icon"
+          />
+          <span>게시판</span>
         </button>
       </div>
 
       {showSettingPopup && (
-        <div className="fixed inset-0 bg-black/30 flex justify-center items-center z-50">
-          <div className="bg-white text-black p-5 rounded-xl w-72">
-            <h3 className="text-lg font-bold mb-4 text-center">그룹 설정</h3>
-            <div className="mb-2">
-              <p className="text-sm font-semibold">그룹 이름</p>
-              <input
-                type="text"
-                value={editGroupName}
-                onChange={(e) => setEditGroupName(e.target.value)}
-                className="w-full border border-gray-400 px-2 py-1 text-sm rounded"
-              />
-            </div>
-            <div className="mb-2">
-              <p className="text-sm font-semibold">참여 코드: {groupCode}</p>
-            </div>
-            <div className="mb-4">
-              <p className="text-sm font-semibold mb-1">회의 길이</p>
-              <div className="flex gap-2">
-                <select className="w-1/2 border border-gray-400 rounded px-2 py-1 text-sm" defaultValue="0">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <option key={i} value={i}>{i}시간</option>
-                  ))}
-                </select>
-                <select className="w-1/2 border border-gray-400 rounded px-2 py-1 text-sm" defaultValue="0">
-                  <option value="0">0분</option>
-                  <option value="30">30분</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button className="bg-orange-500 text-white rounded py-2 text-sm">회의 투표 시작</button>
-              <button
-                onClick={() => setShowSettingPopup(false)}
-                className="bg-gray-300 text-black rounded py-2 text-sm"
-              >
-                뒤로가기
+        <div className="settings-popup-overlay">
+          <div className="settings-popup-box">
+            <div className="settings-header">
+              <button onClick={() => setShowSettingPopup(false)} aria-label="뒤로가기">
+                <img src={icon_back_black} className="setting-back-icon" />
               </button>
+              <h3 className="settings-title">그룹 설정</h3>
+            </div>
+
+            <div className="settings-label">그룹 이름</div>
+            <input
+              type="text"
+              value={editGroupName}
+              onChange={(e) => setEditGroupName(e.target.value)}
+              className="settings-input"
+            />
+            <button onClick={handleGroupNameSave} className="settings-btn secondary">
+              그룹 이름 저장
+            </button>
+
+            <div className="settings-label">참여 코드: {groupCode}</div>
+
+            <div className="settings-label">회의 길이</div>
+            <div className="settings-duration-selects">
+              <select value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))}>
+                {[1, 2, 3, 4].map((i) => (
+                  <option key={i} value={i}>{i}시간</option>
+                ))}
+              </select>
+              <select value={durationMinutes} onChange={(e) => setDurationMinutes(Number(e.target.value))}>
+                <option value={0}>0분</option>
+                <option value={30}>30분</option>
+              </select>
+            </div>
+            <button onClick={handleDurationSave} className="settings-btn secondary mt-2">
+              회의 길이 저장
+            </button>
+            <div className="settings-label">
+              그룹 멤버
+              <ul className="text-sm mt-1 space-y-1">
+                {groupMembers.map((member, idx) => (
+                  <div key={idx}>{member.username} ({member.role})</div>
+                ))}
+
+              </ul>
+            </div>
+
+            <div className="settings-buttons">
+              <button onClick={handleStartVote} className="settings-btn primary">회의 투표 시작</button>
             </div>
           </div>
         </div>
@@ -182,11 +301,7 @@ export default function IndividualPage() {
                 취소
               </button>
               <button
-                onClick={() => {
-                  setPosts(posts.filter((post) => post.id !== selectedPost.id));
-                  setSelectedPost(null);
-                  setShowDeleteConfirm(false);
-                }}
+                onClick={handleDelete}
                 className="bg-red-500 text-white px-4 py-1 rounded"
               >
                 확인

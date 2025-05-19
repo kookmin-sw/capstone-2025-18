@@ -14,6 +14,9 @@
   justify-content: space-between;
   margin-bottom: 8px;
   gap: 6px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .timetable-display-date {
@@ -25,18 +28,23 @@
   margin: 0 5px 0 10px;
   font-size: 16px;
   flex: 1;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .timetable-add-event-btn {
-  border-radius: 6px;
-  background-color: #E8A01D;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #202020;
   cursor: pointer;
-  /* border: 1px solid #000; */
   padding: 4px 8px;
-  font-size: 12px;
-  font-weight: bold;
-  color: white;
+  display: flex;
+  justify-items: center;
+  align-items: center;
+}
+
+.timetable-add-event-btn img {
+  width: 20px;
 }
 
 .tag-filter-buttons {
@@ -45,7 +53,7 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  /* margin-top: 6px; */
 }
 
 .tag-option-btn {
@@ -56,38 +64,52 @@
   margin: 0;
   min-width: 30px;
   height: 22px;
-  color: white;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .tag-option-btn.selected {
   outline: 1.5px solid #000;
+  opacity: 1;
+}
+
+.timetable-scroll-wrapper {
+  overflow-y: auto;
+  max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 88px);
 }
 
 .timetable-header-grid {
   display: grid;
-  grid-template-columns: 20px repeat(7, 40px);
+  grid-template-columns: 20px repeat(7, 37px);
   width: fit-content;
   background: #F9F4E9;
   border-bottom: 1px solid #ccc;
   flex-shrink: 0;
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: 0px;
+  z-index: 40;
 }
 
 .timetable-body-grid {
   display: grid;
-  grid-template-columns: 20px repeat(7, 40px);
+  grid-template-columns: 20px repeat(7, 37px);
   width: fit-content;
   flex-grow: 1;
   overflow-y: auto;
+  background-color: #F9F4E9;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.timetable-body-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .header-cell {
   text-align: center;
   padding: 4px 0;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 13px;
   border: 1px solid #eee;
 }
 
@@ -96,16 +118,35 @@
   align-items: center;
   justify-content: flex-end;
   padding-right: 4px;
-  font-size: 10px;
+  font-size: 12px;
   border: 1px solid #eee;
-  /* border-left: 1px solid #ddd; */
   font-weight: bold;
+}
+
+.time-cell-block {
+  flex: 1;
+  border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  position: relative;
+}
+.time-cell-block.unavailable {
+  background-color: #f0f0f0;
+}
+.time-cell-block.selected {
+  background-color: #e6f7ff;
+}
+
+
+.header-date {
+  font-size: 11px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cell {
   border: 1px solid #eee;
-  height: 36px;
-  /* margin-bottom: 2px; */
   position: relative;
   cursor: pointer;
 }
@@ -116,17 +157,23 @@
 
 .event-block {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  padding: 1px 2px;
-  font-size: 10px;
-  color: white;
-  border-radius: 12px;
-  text-align: center;
+  left: 0;
+  width: 100%;
+  background-color: #91caff;
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-sizing: border-box;
   overflow: hidden;
-  z-index: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  z-index: 30;
+  pointer-events: none;
 }
+
 
 .selected-date-circle {
   border: 1px solid black;
@@ -146,14 +193,6 @@
   margin-bottom: 2px;
 }
 
-.header-date {
-  font-size: 11px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .timetable-saturday {
   color: blue;
 }
@@ -162,11 +201,30 @@
   color: red;
 }
 
-.timetable-body-grid {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+.time-row {
+  display: flex;
+  height: 10px; /* 10분 단위 셀 */
 }
 
-.timetable-body-grid::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+.minute-cell {
+  flex: 1;
+  /* border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee; */
+  position: relative;
+  height: 10px;
+  z-index: 36;
 }
+
+.minute-cell.unavailable {
+  background-color: #f0f0f0;
+}
+
+.minute-cell.selected {
+  background-color: #e6f7ff;
+}
+
+.hour-cell {
+  border: 1px solid #eee;
+  z-index: 0;
+}
+
