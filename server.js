@@ -188,6 +188,7 @@ app.get('/auth/kakao', passport.authenticate('kakao'));
 
 // 카카오 로그인 콜백
 app.get('/auth/kakao/callback', passport.authenticate('kakao', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect('/');
@@ -200,6 +201,7 @@ app.get('/auth/google', passport.authenticate('google', {
 
 //구글 로그인 완료 콜백
 app.get('/auth/google/callback', passport.authenticate('google', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect('/');
@@ -210,6 +212,7 @@ app.get('/auth/naver', passport.authenticate('naver'));
 
 // 네이버 완료 콜백
 app.get('/auth/naver/callback', passport.authenticate('naver', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect('/');
@@ -221,6 +224,139 @@ app.get('/logout', (req, res) => {
     res.redirect('/')  // 로그아웃 후 리디렉션
   })
 })
+
+// 로그인 확인
+app.get('/isAuth', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
+
+// 사용자 프로필
+app.get('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  try {
+    const user = await db.collection('user').findOne({ _id: new ObjectId(req.user._id) });
+    if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+
+    res.status(200).json({
+      nickname: user.nickname || '',
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+app.put('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  const userId = new ObjectId(req.user._id);
+  const { nickname, profileImage } = req.body;
+
+  try {
+    await db.collection('user').updateOne(
+      { _id: userId },
+      { $set: { nickname: nickname ?? '', profileImage: profileImage ?? '' } }
+    );
+    res.status(200).json({ message: '프로필 업데이트 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '프로필 업데이트 실패' });
+  }
+});
+
+// 그룹 명 변경
+app.put("/groups/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  const groupId = req.params.id;
+  const { groupName } = req.body;
+
+  if (!groupName || typeof groupName !== "string") {
+    return res.status(400).json({ message: "유효한 그룹 이름을 입력하세요." });
+  }
+
+  try {
+    const result = await db.collection("groups").updateOne(
+      { _id: new ObjectId(groupId) },
+      { $set: { groupName } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    }
+
+    res.json({ message: "그룹 이름이 성공적으로 변경되었습니다." });
+  } catch (err) {
+    console.error("그룹 이름 변경 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹장 넘기기
+app.post("/groups/:groupId/transfer", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    await db.collection("groups").updateOne(
+      { _id: groupId },
+      { $set: { ownerId: new ObjectId(targetUserId) } }
+    );
+    await db.collection("group_members").updateMany(
+      { groupId, userId: { $in: [new ObjectId(req.user._id), new ObjectId(targetUserId)] } },
+      [
+        {
+          $set: {
+            role: {
+              $cond: [
+                { $eq: ["$userId", new ObjectId(targetUserId)] },
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      ]
+    );
+    res.status(200).json({ message: "그룹장을 넘겼습니다." });
+  } catch (err) {
+    console.error("그룹장 변경 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹원 강퇴
+app.post("/groups/:groupId/kick", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    if (String(req.user._id) === String(targetUserId)) {return res.status(400).json({ message: "자기 자신은 강퇴할 수 없습니다." });}
+    const result = await db.collection("group_members").deleteOne({
+      groupId,
+      userId: new ObjectId(targetUserId)
+    });
+    if (result.deletedCount === 0) {return res.status(404).json({ message: "이미 탈퇴된 유저입니다." });}
+    res.status(200).json({ message: "해당 사용자를 강퇴했습니다." });
+  } catch (err) {
+    console.error("강퇴 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 
 //생성 테스트
 app.get('/groups/create', (req, res) => {
@@ -1576,7 +1712,7 @@ app.post('/groups/:groupId/posts', async (req, res) => {
 
   const groupId = new ObjectId(req.params.groupId);
   const authorId = new ObjectId(req.user._id);
-  const { title, content, is_notice } = req.body;
+  const { title, content, isNotice, isVote, voteOptions } = req.body;
 
   try {
     const group = await db.collection('groups').findOne({ _id: groupId });
@@ -1593,7 +1729,9 @@ app.post('/groups/:groupId/posts', async (req, res) => {
       author_id: authorId,
       title,
       content,
-      is_notice: is_notice === true || is_notice === 'true',
+      isNotice: isNotice === true || isNotice === 'true',
+      isVote: isVote === true || isVote === 'true',
+      voteOptions: voteOptions || [],
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -1626,7 +1764,7 @@ app.get('/groups/:groupId/posts', async (req, res) => {
     if (!member) return res.status(403).send('그룹 멤버가 아닙니다.');
 
     const filter = { group_id: groupId };
-    if (onlyNotice) filter.is_notice = true;
+    if (onlyNotice) filter.isNotice = true;
 
     const posts = await db.collection('posts')
       .find(filter)
@@ -1646,7 +1784,7 @@ app.put('/posts/:postId', async (req, res) => {
 
   const postId = new ObjectId(req.params.postId);
   const userId = new ObjectId(req.user._id);
-  const { title, content, is_notice } = req.body;
+  const { title, content, isNotice, isVote, voteOptions } = req.body;
 
   try {
     const post = await db.collection('posts').findOne({ _id: postId });
@@ -1661,7 +1799,9 @@ app.put('/posts/:postId', async (req, res) => {
         $set: {
           title,
           content,
-          is_notice: is_notice === true || is_notice === 'true',
+          isNotice: isNotice === true || isNotice === 'true',
+          isVote: isVote === true || isVote === 'true',
+          voteOptions: voteOptions || [],
           updated_at: new Date()
         }
       }
@@ -1761,9 +1901,29 @@ app.get('/posts/:postId', async (req, res) => {
       .sort({ created_at: 1 })
       .toArray();
 
+    const votes = await db.collection('votes').find({ post_id: postId }).toArray();
+    const myVote = votes.find(v => v.user_id.toString() === req.user._id.toString());
+
+    const countMap = {};
+    votes.forEach(v => {
+      (v.selectedOptionIds || []).forEach(id => {
+        countMap[id] = (countMap[id] || 0) + 1;
+      });
+    });
+
+    if (post.voteOptions && Array.isArray(post.voteOptions)) {
+      post.voteOptions = post.voteOptions.map(opt => ({
+        ...opt,
+        voteCount: countMap[opt.id] || 0
+      }));
+    }
+
+    const myVotes = myVote?.selectedOptionIds || [];
+
     res.status(200).json({
       post,
-      comments
+      comments,
+      myVotes
     });
   } catch (err) {
     console.error(err);
@@ -1825,3 +1985,38 @@ app.get('/posts/:postId/view', async (req, res) => {
   }
 });
 
+// 게시글 투표
+app.post('/posts/:postId/votes', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+  const { selectedOptionIds } = req.body;
+
+  if (!Array.isArray(selectedOptionIds) || selectedOptionIds.length === 0) {
+    return res.status(400).send('선택된 항목이 없습니다.');
+  }
+
+  try {
+    await db.collection('votes').updateOne(
+      { post_id: postId, user_id: userId },
+      {
+        $set: {
+          selectedOptionIds,
+          updated_at: new Date()
+        },
+        $setOnInsert: {
+          post_id: postId,
+          user_id: userId,
+          created_at: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    res.status(200).json({ message: '투표 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 저장 실패');
+  }
+});
