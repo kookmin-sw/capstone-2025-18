@@ -1,8 +1,7 @@
-# Project Title
+# Tm:ta
 
-Welcome to our GitHub Pages site for the **Capstone Project**.
+<img src="/public/header.png" style="width: 100%;" />
 
-This page introduces the project, its goals, and provides useful links and documentation for users and contributors.
 
 ---
 
@@ -14,6 +13,9 @@ This page introduces the project, its goals, and provides useful links and docum
 - **주제** : 그룹 단위 일정 공유에 최적화 된 캘린더 웹앱, 틈타. 
 - **목표**: 겹치지 않는 일정 속, 함께할 틈을 찾아드립니다.
 
+  
+<img src="/public/poster.jpg" style="width: 100%;" />
+
 ---
 
 ## 🚀 Getting Started
@@ -22,7 +24,4 @@ This page introduces the project, its goals, and provides useful links and docum
 
 
 ```bash
-git clone https://github.com/kookmin-sw/cap-template.git
-cd cap-template
-npm install
-npm start
+click the URL
