@@ -67,9 +67,9 @@ export default function SignupPage() {
 
         <div className="text-center text-sm mt-4">또는 소셜 계정으로 가입</div>
         <div className="flex justify-around">
-          <button onClick={() => handleSocialLogin("kakao")}> <Image src="/icons/kakao.png" alt="kakao" className="w-8" /></button>
-          <button onClick={() => handleSocialLogin("google")}> <Image src="/icons/google.png" alt="google" className="w-8" /></button>
-          <button onClick={() => handleSocialLogin("naver")}> <Image src="/icons/naver.png" alt="naver" className="w-8" /></button>
+          <button onClick={() => handleSocialLogin("kakao")}> <Image src="/icons/kakao.png" alt="kakao" width={32} height={32} /></button>
+          <button onClick={() => handleSocialLogin("google")}> <Image src="/icons/google.png" alt="google"  width={32} height={32}  /></button>
+          <button onClick={() => handleSocialLogin("naver")}> <Image src="/icons/naver.png" alt="naver"  width={32} height={32}  /></button>
         </div>
       </div>
     </div>

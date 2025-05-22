@@ -40,15 +40,15 @@ export default function EventModal({ onClose, onSave }) {
       <div className="modal-content">
         <div className="modal-actions">
             <button onClick={onClose}>
-              <Image src={icon_cancel_black} alt="close modal" className='modal-close-btn'/>
+              <Image src={icon_cancel_black} alt="close modal" width={20} height={20} className='modal-close-btn'/>
             </button>
+            <h4 onClick={handleCalendar} className="modal-title">
+              {activeTab === "start" ? startDate.format("YYYY-MM-DD") : endDate.format("YYYY-MM-DD")}
+            </h4>
             <button onClick={handleSave}>
-              <Image src={icon_check_black} alt="save btn" className='modal-submit-btn' />
+              <Image src={icon_check_black} alt="save btn" width={20} height={20} className='modal-submit-btn' />
             </button>
         </div>
-        <h4 onClick={handleCalendar} className="modal-title">
-          {activeTab === "start" ? startDate.format("YYYY-MM-DD") : endDate.format("YYYY-MM-DD")}
-        </h4>
         <div className="event-modal-scroll">
               <input
               type="text"

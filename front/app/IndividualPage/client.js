@@ -14,22 +14,33 @@ export default function IndividualClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const groupId = searchParams.get("id") || "error";
+
   const [groupName, setGroupName] = useState("");
+  const [editGroupName, setEditGroupName] = useState("");
   const [groupCode, setGroupCode] = useState("");
   const [groupMembers, setGroupMembers] = useState([]);
+
+  const [myUserId, setMyUserId] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+
   const [blockLength, setBlockLength] = useState(1);
   const [durationHours, setDurationHours] = useState(1);
   const [durationMinutes, setDurationMinutes] = useState(0);
 
+  const [allTags, setAllTags] = useState([]);
+  const [sharedTagIds, setSharedTagIds] = useState([]);
+
   const [selectedTab, setSelectedTab] = useState("timetable");
-  const [showSettingPopup, setShowSettingPopup] = useState(false);
-  const [editGroupName, setEditGroupName] = useState("");
+  
   const [posts, setPosts] = useState([]);
-  const [showWritePopup, setShowWritePopup] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedVotes, setSelectedVotes] = useState([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [showSettingPopup, setShowSettingPopup] = useState(false);
+  const [showWritePopup, setShowWritePopup] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
   const icon_pencil = `/icons/pencil.png`;
   const icon_setting = `/icons/setting.png`;
   const icon_back = `/icons/back.png`;
@@ -37,6 +48,7 @@ export default function IndividualClient() {
 
   useEffect(() => {
     if (groupId === "error") return;
+
     const fetchGroup = async () => {
       try {
         const res = await api.get(`/groups/${groupId}`);
@@ -44,11 +56,10 @@ export default function IndividualClient() {
         setEditGroupName(res.data.groupName);
         setGroupCode(res.data.inviteCode);
         setGroupMembers(res.data.members ?? []);
-        const hours = res.data.meetingDuration?.hours || 1;
-        const minutes = res.data.meetingDuration?.minutes || 0;
-        setBlockLength(hours);
-        setDurationHours(hours);
-        setDurationMinutes(minutes);
+        setOwnerId(res.data.ownerId);
+        setDurationHours(res.data.meetingDuration?.hours || 1);
+        setDurationMinutes(res.data.meetingDuration?.minutes || 0);
+        setBlockLength(res.data.meetingDuration?.hours || 1);
       } catch (err) {
         console.error("그룹 정보 불러오기 실패", err);
       }
@@ -63,15 +74,59 @@ export default function IndividualClient() {
       }
     };
 
+    const fetchAuth = async () => {
+      try {
+        const res = await api.get(`/isAuth`);
+        setMyUserId(res.data.user._id);
+      } catch (err) {
+        console.error("내 사용자 정보 조회 실패", err);
+      }
+    };
+
+    const fetchTags = async () => {
+      try {
+        const res = await api.get('/tags');
+        setAllTags(res.data);
+      } catch (err) {
+        console.error("태그 조회 실패", err);
+      }
+    };
+
+    const fetchSharedTagIds = async () => {
+      try {
+        const res = await api.get(`/groups/${groupId}/share-tags`);
+        setSharedTagIds(res.data.sharedTagIds);
+      } catch (err) {
+        console.error("공유 태그 조회 실패", err);
+      }
+    };
+
     fetchGroup();
     fetchPosts();
+    fetchAuth();
+    fetchTags();
+    fetchSharedTagIds();
   }, [groupId]);
+  // console.log(groupMembers);
+  const toggleTag = (tagId) => {
+    setSharedTagIds(prev =>
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const submitSharedTags = async () => {
+    try {
+      await api.post(`/groups/${groupId}/share-tags`, { tagIds: sharedTagIds });
+      alert("공유 태그 설정 완료");
+    } catch (err) {
+      alert("공유 태그 설정 실패");
+    }
+  };
 
   const handleGroupNameSave = async () => {
     try {
       setGroupName(editGroupName);
       await api.put(`/groups/${groupId}`, { groupName: editGroupName });
-      // console.log(groupName, editGroupName)
     } catch (err) {
       console.error("그룹 이름 저장 실패", err);
     }
@@ -84,7 +139,7 @@ export default function IndividualClient() {
         minutes: durationMinutes
       });
       setBlockLength(durationHours);
-      alert("회의 길이 저장 완료");
+      console.log("회의 길이 저장 완료");
       setShowSettingPopup(false);
     } catch (err) {
       console.error("회의 길이 저장 실패", err);
@@ -92,26 +147,33 @@ export default function IndividualClient() {
   };
 
   const handleStartVote = async () => {
-    if (voteActive) {
-      alert("이미 투표가 시작되었습니다.");
-      return;
-    }
     try {
       await api.post(`/groups/${groupId}/vote/start`);
-      alert("투표가 시작되었습니다.");
-      setVoteActive(true);
+      console.log("투표가 시작되었습니다.");
     } catch (err) {
-      const msg = err.response?.data?.message;
-      if (msg === "이미 진행 중인 투표가 있습니다.") {
-        alert("이미 투표가 시작되어 있습니다.");
-        setVoteActive(true);
-      } else {
-        console.error("투표 시작 실패", err);
-        alert("투표 시작 중 오류가 발생했습니다.");
-      }
+      console.error("투표 시작 실패");
     }
   };
 
+  const handleTransferOwner = async (targetUserId) => {
+    try {
+      await api.post(`/groups/${groupId}/transfer`, { targetUserId });
+      console.log("그룹장을 성공적으로 넘겼습니다.");
+      location.reload();
+    } catch (err) {
+      console.error("그룹장 넘기기에 실패했습니다.");
+    }
+  };
+
+  const handleKickMember = async (targetUserId) => {
+    try {
+      await api.post(`/groups/${groupId}/kick`, { targetUserId });
+      console.log("강퇴 완료");
+      location.reload();
+    } catch (err) {
+      console.error("강퇴 실패");
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -128,11 +190,11 @@ export default function IndividualClient() {
       <div className="relative w-80 mx-auto mx-h-screen bg-neutral-100 flex flex-col">
         <div className="group-header">
           <button onClick={() => router.back()}>
-            <Image src={icon_back} alt="back btn" className="group-header-icon" />
+            <Image src={icon_back} alt="back btn" width={18} height={30} className="group-header-icon" />
           </button>
           <h2 className="text-sm font-bold">{groupName}</h2>
           <button onClick={() => setShowSettingPopup(true)}>
-            <Image src={icon_setting} alt="setting btn" className="group-header-icon" />
+            <Image src={icon_setting} alt="setting btn"  width={30} height={30} className="group-header-icon" />
           </button>
         </div>
 
@@ -146,7 +208,7 @@ export default function IndividualClient() {
 
         {selectedTab === "board" && (
           <button className="group-pencil-back" onClick={() => setShowWritePopup(true)}>
-            <Image src={icon_pencil} alt="write btn"/>
+            <Image src={icon_pencil}  width={30} height={30} alt="write btn"/>
           </button>
         )}
 
@@ -158,6 +220,7 @@ export default function IndividualClient() {
             <Image
               src={selectedTab === "timetable" ? "/icons/calendar-active.png" : "/icons/calendar.png"}
               alt="시간표"
+              width={30} height={30}
               className="tab-icon"
             />
             <span>시간표</span>
@@ -170,6 +233,7 @@ export default function IndividualClient() {
             <Image
               src={selectedTab === "board" ? "/icons/board-active.png" : "/icons/board.png"}
               alt="게시판"
+              width={30} height={30}
               className="tab-icon"
             />
             <span>게시판</span>
@@ -181,7 +245,7 @@ export default function IndividualClient() {
             <div className="settings-popup-box">
               <div className="settings-header">
                 <button onClick={() => setShowSettingPopup(false)} aria-label="뒤로가기">
-                  <Image src={icon_back_black} alt="back btn" className="setting-back-icon" />
+                  <Image src={icon_back_black} alt="back btn" width={18} height={30} className="setting-back-icon" />
                 </button>
                 <h3 className="settings-title">그룹 설정</h3>
               </div>
@@ -214,15 +278,36 @@ export default function IndividualClient() {
               <button onClick={handleDurationSave} className="settings-btn secondary mt-2">
                 회의 길이 저장
               </button>
-              <div className="settings-label">
-                그룹 멤버
-                <ul className="text-sm mt-1 space-y-1">
-                  {groupMembers.map((member, idx) => (
-                    <div key={idx}>{member.username} ({member.role})</div>
-                  ))}
+              <div className="settings-label">공유할 태그 선택</div>
+            <div className="settings-label">
+              {allTags.map(tag => (
+                <button
+                  key={tag._id}
+                  className={`tag-select-btn ${sharedTagIds.includes(tag._id) ? 'selected' : ''}`}
+                  style={{ backgroundColor: tag.color }}
+                  onClick={() => toggleTag(tag._id)}
+                >
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+            <button onClick={submitSharedTags} className="settings-btn primary">공유 태그 저장</button>
 
-                </ul>
-              </div>
+              <div className="settings-label">그룹 멤버</div>
+            <div className="settings-members-list">
+              {groupMembers.map((member) => (
+                <div key={member.userId} className="settings-label">
+                  {member.userId === ownerId && "👑 "}{member.username}
+                  {myUserId === ownerId && member.userId !== myUserId && (
+                    <div className="settings-label">
+                      <button onClick={() => handleTransferOwner(member.userId)} className="settings-btn">그룹장 넘기기</button>
+                      <button onClick={() => handleKickMember(member.userId)} className="settings-btn">강퇴</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
 
               <div className="settings-buttons">
                 <button onClick={handleStartVote} className="settings-btn primary">회의 투표 시작</button>

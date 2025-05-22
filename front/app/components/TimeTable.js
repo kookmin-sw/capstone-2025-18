@@ -182,7 +182,7 @@ const TimeTable = () => {
           <button onClick={handleCalendarToggle} className="timetable-show-calendar">▼</button>
         </div>
         <button className="timetable-add-event-btn" onClick={handleAddEvent}>
-          <Image src={icon_plus_thin} alt='add event btn' />
+          <Image src={icon_plus_thin} alt='add event btn' width={20} height={20} />
         </button>
         {showCalendar && (
           <div

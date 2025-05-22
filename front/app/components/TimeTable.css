@@ -1,3 +1,7 @@
+::-webkit-scrollbar {
+    display: none;
+}
+
 .timetable-container {
   overflow-x: auto;
   padding: 6px;
@@ -76,6 +80,9 @@
 .timetable-scroll-wrapper {
   overflow-y: auto;
   max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 88px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .timetable-header-grid {

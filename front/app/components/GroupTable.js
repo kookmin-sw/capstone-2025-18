@@ -20,9 +20,12 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
   const [unavailableBlocks, setUnavailableBlocks] = useState([]);
   const [voteActive, setVoteActive] = useState(false);
   const [myVote, setMyVote] = useState(null);
-
+  // console.log("groupId in GroupTable:", groupId);
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId|| groupId.length !== 24) {
+      console.warn("Invalid groupId:", groupId);
+      return;
+    } 
 
     const fetchUnavailableBlocks = async () => {
       try {
@@ -46,6 +49,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
     const fetchVoteStatus = async () => {
       try {
         const res = await api.get(`/groups/${groupId}/vote/status`);
+        console.log(res.status);
         if (res.status === 200) {
           setVoteActive(true);
           if (res.data.myVote) {
@@ -190,7 +194,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
         disabled={color === '#ccc'}
         onClick={onClick}
       >
-        <Image src={iconSrc} alt="group btn"className='group-btn-icon' />
+        <Image src={iconSrc} width={35} height={35} alt="group btn"className='group-btn-icon' />
       </button>
     );
   };
@@ -264,12 +268,11 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
                     <Image
                       src={heartSrc}
                       alt="heart"
+                      width={30} height={30}
                       style={{
                         position: 'absolute',
                         top: '-14px',
                         right: '-14px',
-                        width: '29px',
-                        height: '29px',
                         zIndex: '1000'
                       }}
                     />

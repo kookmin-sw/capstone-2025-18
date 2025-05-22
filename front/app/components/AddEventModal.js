@@ -79,14 +79,14 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
 
         <div className="modal-actions">
           <button onClick={onClose}>
-            <Image src={icon_cancel_black} alt="close btn" className='modal-close-btn'/>
+            <Image src={icon_cancel_black} alt="close btn" width={20} height={20} className='modal-close-btn'/>
           </button>
+          <h3>{isEditing ? '일정 수정' : '일정 추가'}</h3>
           <button onClick={handleSubmit}>
-            <Image src={icon_check_black} alt='save btn' className='modal-submit-btn' />
+            <Image src={icon_check_black} alt='save btn' width={20} height={20} className='modal-submit-btn' />
           </button>
         </div>
 
-        <h3>{isEditing ? '일정 수정' : '일정 추가'}</h3>
 
         <label>제목</label>
         <input value={title} onChange={e => setTitle(e.target.value)} />
