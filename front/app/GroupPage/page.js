@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 import api from "@/lib/api";
 import GroupList from "../components/GroupList";
 import Profile from "../components/Profile";
@@ -29,7 +30,9 @@ export default function GroupPage() {
       try {
         const res = await api.get('/me');
         setNickname(res.data.username);
+        // console.log(res.data);
       } catch (err) {
+        router.push('/login');
         console.error("닉네임 조회 실패", err);
       }
     };
@@ -37,12 +40,15 @@ export default function GroupPage() {
     const fetchGroups = async () => {
       try {
         const res = await api.get('/groups');
+        // console.log("aa");
+        // console.log(res.data);
         setGroups(res.data.map(group => ({
           id: group.groupId,
           name: group.groupName,
-          members: group.memberCount ?? 0,
+          members: group.memberCount,
           code: group.inviteCode
         })));
+
       } catch (err) {
         console.error("그룹 목록 불러오기 실패", err);
       }
@@ -57,6 +63,12 @@ export default function GroupPage() {
   };
 
   const confirmExitGroup = async () => {
+
+  if (!exitGroupId) {
+    console.error("exitGroupId가 정의되지 않음");
+    return;
+  }
+
     try {
       await api.post(`/groups/${exitGroupId}/leave`);
       setGroups(groups.filter((group) => group.id !== exitGroupId));
@@ -110,7 +122,7 @@ export default function GroupPage() {
     <div className="group-page-container">
       <div className="group-page-header">
         <button onClick={() => router.push("/")} aria-label="뒤로가기">
-          <img src={icon_back_black} className="header-icon" />
+          <Image src={icon_back_black} alt="back btn" width={18} height={30} className="header-icon" />
         </button>
         <h2 className="text-center font-bold">내 그룹</h2>
         <button
@@ -119,7 +131,7 @@ export default function GroupPage() {
             setTimeout(() => setProfileVisible(true), 10);
           }}
         >
-          <img src={icon_person} className="header-icon" />
+          <Image src={icon_person} alt="person btn" width={30} height={30} className="header-icon" />
         </button>
       </div>
 
@@ -134,11 +146,11 @@ export default function GroupPage() {
       <div className="fixed bottom-0 left-0 w-full z-10">
         <div className="w-80 mx-auto px-4 py-3 flex justify-between">
           <button onClick={() => setShowJoinPopup(true)} className="groupList-btn">
-            <img src={icon_search} />
+            <Image src={icon_search} width={22} height={22} alt="search btn"/>
             그룹 찾기
           </button>
           <button onClick={() => setShowCreatePopup(true)} className="groupList-btn">
-            <img src={icon_plus} />
+            <Image src={icon_plus} width={22} height={22} alt="add btn"/>
             그룹 생성
           </button>
         </div>

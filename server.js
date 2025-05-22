@@ -203,7 +203,13 @@ app.get('/me', (req, res) => {
   });
 });
 
-// ✅ 소셜 로그인 라우터 추가 (프론트에서 요청 시 404 방지)
+app.get('/isAuth', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
 
 // 카카오
 app.get('/auth/kakao', passport.authenticate('kakao'));
@@ -249,6 +255,41 @@ app.get('/logout', (req, res) => {
   })
 })
 
+// 사용자 프로필
+app.get('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  try {
+    const user = await db.collection('user').findOne({ _id: new ObjectId(req.user._id) });
+    if (!user) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+
+    res.status(200).json({
+      nickname: user.nickname || '',
+      profileImage: user.profileImage || ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+app.put('/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+
+  const userId = new ObjectId(req.user._id);
+  const { nickname, profileImage } = req.body;
+
+  try {
+    await db.collection('users').updateOne(
+      { _id: userId },
+      { $set: { nickname: nickname ?? '', profileImage: profileImage ?? '' } }
+    );
+    res.status(200).json({ message: '프로필 업데이트 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '프로필 업데이트 실패' });
+  }
+});
 
 //생성 테스트
 app.get('/groups/create', (req, res) => {
@@ -349,6 +390,12 @@ app.get('/groups', async (req, res) => {
     const groups = await db.collection('groups')
       .find({ _id: { $in: groupIds } })
       .toArray();
+    
+     // + 그룹 멤버 수 계산
+    const memberCounts = await Promise.all(groupIds.map(async (groupId) => {
+      const count = await db.collection('group_members').countDocuments({ groupId });
+      return { groupId: groupId.toString(), count };
+    }));
 
     // 4. 응답 데이터 조합
     const response = memberships.map(member => {
@@ -358,7 +405,8 @@ app.get('/groups', async (req, res) => {
         groupName: group?.groupName || '(삭제된 그룹)',
         inviteCode: group?.inviteCode || null,
         role: member.role,
-        joinedAt: member.joinedAt
+        joinedAt: member.joinedAt,
+        memberCount : memberCounts
       };
     });
 
@@ -428,7 +476,7 @@ app.get('/groups/:id', async (req, res) => {
         userId: member.userId,
         username: user?.username || '(알 수 없음)',
         role: member.role,
-        joinedAt: member.joinedAt
+        joinedAt: member.joinedAt,
       };
     });
 
@@ -459,9 +507,9 @@ app.post('/groups/:id/leave', async (req, res) => {
     if (!group) return res.status(404).send('그룹이 존재하지 않습니다.');
 
     // 2. owner이면 나가지 못하게 막기
-    if (group.ownerId.toString() === userId.toString()) {
-      return res.status(400).send('그룹 생성자는 그룹을 나갈 수 없습니다.');
-    }
+    // if (group.ownerId.toString() === userId.toString()) {
+    //   return res.status(400).send('그룹 생성자는 그룹을 나갈 수 없습니다.');
+    // }
 
     // 3. 그룹 멤버에서 삭제
     const result = await db.collection('group_members').deleteOne({
@@ -543,7 +591,10 @@ app.put('/groups/:groupId', async (req, res) => {
   const { groupName } = req.body;
 
   try {
-    const group = await db.collection('groups').findOne({ _id: groupId });
+    const group = await db.collection('groups').updateOne(
+      { _id: new ObjectId(groupId) },
+      { $set: { groupName } }
+    );
     if (!group) return res.status(404).send('그룹을 찾을 수 없습니다.');
     if (group.ownerId.toString() !== req.user._id.toString()) {
       return res.status(403).send('그룹장만 수정할 수 있습니다.');
@@ -680,7 +731,7 @@ app.post('/schedules', async (req, res) => {
       const [startHour, startMinute] = String(weeklyStart).split(':').map(Number);
       const [endHour, endMinute] = String(weeklyEnd).split(':').map(Number);
 
-      // ✅ 입력된 시각을 KST 기준으로 그대로 저장
+      // 입력된 시각을 KST 기준으로 그대로 저장
       schedule.start = new Date(2000, 0, 1, startHour, startMinute); // KST 21:30 → UTC 자동 변환됨
       schedule.end = new Date(2000, 0, 1, endHour, endMinute);
       schedule.daysOfWeek = daysOfWeek.split(',').map(x => parseInt(x.trim()));
@@ -752,7 +803,7 @@ app.get('/schedules/monthly', async (req, res) => {
       ]
     }).toArray();
 
-    // ✅ 태그 필터 파싱
+    // 태그 필터 파싱
     const tagNames = (req.query.tagNames || '').split(',').map(x => x.trim()).filter(Boolean);
     let tagFilterIds = [];
 
@@ -765,7 +816,7 @@ app.get('/schedules/monthly', async (req, res) => {
       tagFilterIds = tagDocs.map(t => t._id.toString());
     }
 
-    // ✅ 태그 정보 미리 조회
+    // 태그 정보 미리 조회
     const tagIds = [
       ...new Set(rawSchedules.flatMap(s => s.tagIds.map(id => id.toString())))
     ].map(id => new ObjectId(id));
@@ -784,7 +835,7 @@ app.get('/schedules/monthly', async (req, res) => {
     for (const sch of rawSchedules) {
       const relevantTagIds = sch.tagIds.map(id => id.toString());
 
-      // ✅ 태그 필터링 조건
+      // 태그 필터링 조건
       if (tagFilterIds.length > 0 &&
           !relevantTagIds.some(id => tagFilterIds.includes(id))) {
         continue;
@@ -858,8 +909,8 @@ app.get('/schedules/weekly', async (req, res) => {
 
   const weekStart = new Date(req.query.start);
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7); // ✅ +6 → +7일로 확장
-  weekEnd.setHours(0, 0, 0, 0);              // ✅ 자정까지 포함
+  weekEnd.setDate(weekStart.getDate() + 7); 
+  weekEnd.setHours(0, 0, 0, 0);              
 
   try {
     const rawSchedules = await db.collection('schedules').find({
@@ -1034,8 +1085,8 @@ app.get('/groups/:groupId/weekly-schedules', async (req, res) => {
   const groupId = new ObjectId(req.params.groupId);
   const weekStart = new Date(req.query.start); // ISO string
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);   // ✅ 기존 +6 → +7
-  weekEnd.setHours(0, 0, 0, 0);               // ✅ 정확하게 자정 기준
+  weekEnd.setDate(weekStart.getDate() + 7);
+  weekEnd.setHours(0, 0, 0, 0);
 
   try {
     // 1. 그룹 멤버 조회
@@ -1127,7 +1178,7 @@ function extractAvailableSlots(allSchedules, weekStart, weekEnd) {
   const TIME_BLOCKS_PER_DAY = 48; // 30분 단위 (24시간 * 2)
   const scheduleMap = {};
 
-  // ✅ 0~6 → 일~토
+  // 0~6 → 일~토
   for (let d = 0; d <= 6; d++) {
     scheduleMap[d] = Array(TIME_BLOCKS_PER_DAY).fill(0);
   }
@@ -1136,7 +1187,7 @@ function extractAvailableSlots(allSchedules, weekStart, weekEnd) {
     const start = new Date(sch.start);
     const end = new Date(sch.end);
 
-    // ✅ 일정이 주간 범위 넘어가면 클램핑
+    // 일정이 주간 범위 넘어가면 클램핑
     const realStart = start < weekStart ? new Date(weekStart) : start;
     const realEnd = end > weekEnd ? new Date(weekEnd) : end;
 
@@ -1208,7 +1259,7 @@ app.get('/groups/:groupId/available-slots', async (req, res) => {
 
   const groupId = new ObjectId(req.params.groupId);
 
-  // ✅ 주간 시작: 요청 날짜 기준, 해당 주의 "일요일 00:00"
+  // 주간 시작: 요청 날짜 기준, 해당 주의 "일요일 00:00"
   const rawDate = new Date(req.query.start);
   const dayOfWeek = rawDate.getDay(); // 0 (일) ~ 6 (토)
   const weekStart = new Date(rawDate);
@@ -1354,7 +1405,7 @@ app.post('/groups/:groupId/vote', async (req, res) => {
   const groupId = new ObjectId(req.params.groupId);
   const userId = new ObjectId(req.user._id);
   const start = new Date(req.body.start);
-  const end = new Date(req.body.end); // ✅ 프론트에서 직접 계산해서 보냄
+  const end = new Date(req.body.end); // 프론트에서 직접 계산해서 보냄
 
   try {
     const session = await db.collection('vote_sessions').findOne({
@@ -1398,7 +1449,12 @@ app.post('/groups/:groupId/vote', async (req, res) => {
 app.get('/groups/:groupId/vote/status', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인이 필요합니다.');
 
-  const groupId = new ObjectId(req.params.groupId);
+  const { groupId } = req.params;
+  if (!ObjectId.isValid(groupId)) {
+  return res.status(400).send('올바르지 않은 groupId입니다.');
+}
+
+  const groupObjectId = new ObjectId(groupId);
   const userId = new ObjectId(req.user._id);
 
   try {
@@ -1504,7 +1560,7 @@ app.post('/groups/:groupId/vote/close', async (req, res) => {
       return res.status(400).send('투표자가 없습니다.');
     }
 
-    // ✅ 같은 시간대별로 그룹핑
+    // 같은 시간대별로 그룹핑
     const countMap = {};
     for (const s of selections) {
       const key = s.start.toISOString() + '_' + s.end.toISOString();
@@ -1515,11 +1571,11 @@ app.post('/groups/:groupId/vote/close', async (req, res) => {
       }
     }
 
-    // ✅ 가장 많은 투표 받은 시간 구하기
+    // 가장 많은 투표 받은 시간 구하기
     const sorted = Object.values(countMap).sort((a, b) => b.count - a.count);
     const top = sorted[0]; // 득표 수가 가장 높은 시간
 
-    // ✅ 참여한 모든 사람에게 해당 일정 등록
+    //참여한 모든 사람에게 해당 일정 등록
     const userIds = [...new Set(selections.map(s => s.userId.toString()))].map(id => new ObjectId(id));
     const now = new Date();
 
@@ -1535,7 +1591,7 @@ app.post('/groups/:groupId/vote/close', async (req, res) => {
 
     await db.collection('schedules').insertMany(docs);
 
-    // ✅ 투표 세션 상태 종료 처리
+    // 투표 세션 상태 종료 처리
     await db.collection('vote_sessions').updateOne(
       { _id: session._id },
       { $set: { status: 'closed', closedAt: now } }
@@ -1586,7 +1642,7 @@ app.get('/groups/:groupId/vote/form', async (req, res) => {
 
     const myVote = votes.find(v => v.userId.toString() === userId.toString()) || null;
 
-    // ✅ 다른 사람들의 투표 시간대 그룹핑
+    // 다른 사람들의 투표 시간대 그룹핑
     const countMap = {};
     for (const vote of votes) {
       if (vote.userId.toString() === userId.toString()) continue;
@@ -1607,7 +1663,7 @@ app.get('/groups/:groupId/vote/form', async (req, res) => {
 
     res.render('vote-form.ejs', {
       groupId: groupId.toString(),
-      isOwner: group.ownerId.toString() === userId.toString(), // ✅ 추가됨!
+      isOwner: group.ownerId.toString() === userId.toString(),
       myVote: myVote
         ? {
             start: myVote.start.toISOString().slice(0, 16),
@@ -1630,7 +1686,7 @@ app.post('/groups/:groupId/posts', async (req, res) => {
 
   const groupId = new ObjectId(req.params.groupId);
   const authorId = new ObjectId(req.user._id);
-  const { title, content, is_notice } = req.body;
+  const { title, content, is_notice, is_vote, voteOptions } = req.body;
 
   try {
     const group = await db.collection('groups').findOne({ _id: groupId });
@@ -1648,6 +1704,8 @@ app.post('/groups/:groupId/posts', async (req, res) => {
       title,
       content,
       is_notice: is_notice === true || is_notice === 'true',
+      is_vote: is_vote === true || is_vote === 'true',
+      voteOptions: voteOptions || [],
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -1700,7 +1758,7 @@ app.put('/posts/:postId', async (req, res) => {
 
   const postId = new ObjectId(req.params.postId);
   const userId = new ObjectId(req.user._id);
-  const { title, content, is_notice } = req.body;
+  const { title, content, is_notice, is_vote, voteOptions } = req.body;
 
   try {
     const post = await db.collection('posts').findOne({ _id: postId });
@@ -1716,6 +1774,8 @@ app.put('/posts/:postId', async (req, res) => {
           title,
           content,
           is_notice: is_notice === true || is_notice === 'true',
+          is_vote: is_vote === true || is_vote === 'true',
+          voteOptions: voteOptions || [],
           updated_at: new Date()
         }
       }
@@ -1815,15 +1875,36 @@ app.get('/posts/:postId', async (req, res) => {
       .sort({ created_at: 1 })
       .toArray();
 
+    const votes = await db.collection('votes').find({ post_id: postId }).toArray();
+    const myVote = votes.find(v => v.user_id.toString() === req.user._id.toString());
+
+    const countMap = {};
+    votes.forEach(v => {
+      (v.selectedOptionIds || []).forEach(id => {
+        countMap[id] = (countMap[id] || 0) + 1;
+      });
+    });
+
+    if (post.voteOptions && Array.isArray(post.voteOptions)) {
+      post.voteOptions = post.voteOptions.map(opt => ({
+        ...opt,
+        voteCount: countMap[opt.id] || 0
+      }));
+    }
+
+    const myVotes = myVote?.selectedOptionIds || [];
+
     res.status(200).json({
       post,
-      comments
+      comments,
+      myVotes
     });
   } catch (err) {
     console.error(err);
     res.status(500).send('게시글 상세 조회 실패');
   }
 });
+
 
 //댓글 달기
 app.post('/posts/:postId/comments', async (req, res) => {
@@ -1879,3 +1960,96 @@ app.get('/posts/:postId/view', async (req, res) => {
   }
 });
 
+// 게시글 투표
+app.post('/posts/:postId/votes', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const postId = new ObjectId(req.params.postId);
+  const userId = new ObjectId(req.user._id);
+  const { selectedOptionIds } = req.body;
+
+  if (!Array.isArray(selectedOptionIds) || selectedOptionIds.length === 0) {
+    return res.status(400).send('선택된 항목이 없습니다.');
+  }
+
+  try {
+    await db.collection('votes').updateOne(
+      { post_id: postId, user_id: userId },
+      {
+        $set: {
+          selectedOptionIds,
+          updated_at: new Date()
+        },
+        $setOnInsert: {
+          post_id: postId,
+          user_id: userId,
+          created_at: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    res.status(200).json({ message: '투표 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('투표 저장 실패');
+  }
+});
+
+// 그룹장 넘기기
+app.post("/groups/:groupId/transfer", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    await db.collection("groups").updateOne(
+      { _id: groupId },
+      { $set: { ownerId: new ObjectId(targetUserId) } }
+    );
+    await db.collection("group_members").updateMany(
+      { groupId, userId: { $in: [new ObjectId(req.user._id), new ObjectId(targetUserId)] } },
+      [
+        {
+          $set: {
+            role: {
+              $cond: [
+                { $eq: ["$userId", new ObjectId(targetUserId)] },
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      ]
+    );
+    res.status(200).json({ message: "그룹장을 넘겼습니다." });
+  } catch (err) {
+    console.error("그룹장 변경 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹원 강퇴
+app.post("/groups/:groupId/kick", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    if (String(req.user._id) === String(targetUserId)) {return res.status(400).json({ message: "자기 자신은 강퇴할 수 없습니다." });}
+    const result = await db.collection("group_members").deleteOne({
+      groupId,
+      userId: new ObjectId(targetUserId)
+    });
+    if (result.deletedCount === 0) {return res.status(404).json({ message: "이미 탈퇴된 유저입니다." });}
+    res.status(200).json({ message: "해당 사용자를 강퇴했습니다." });
+  } catch (err) {
+    console.error("강퇴 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});

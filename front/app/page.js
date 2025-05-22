@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import TimeTable from "./components/TimeTable";
 import Calendar from "./components/Calendar";
+import Image from 'next/image';
 import "./page.css";
 
 export default function MainPage() {
@@ -18,6 +19,7 @@ export default function MainPage() {
         const res = await api.get("/me");
         if (res.data.username) {
           setAuthenticated(true);
+          console.log(res.data);
         } else {
           setAuthenticated(false);
           router.push("/signup");
@@ -73,7 +75,7 @@ export default function MainPage() {
               onClick={() => handleTabClick(tab)}
               className={isActive ? "active" : ""}
             >
-              <img src={iconSrc} alt={`${tab} icon`} className="tab-icon" />
+              <Image src={iconSrc} alt={`${tab} icon`} width={24} height={24} className="tab-icon" />
               <span>{label}</span>
             </button>
           );
