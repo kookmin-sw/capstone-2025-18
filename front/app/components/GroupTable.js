@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import moment from 'moment';
 import './GroupTable.css';
 import './TimeTable.css';
@@ -189,7 +190,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
         disabled={color === '#ccc'}
         onClick={onClick}
       >
-        <img src={iconSrc} className='group-btn-icon' />
+        <Image src={iconSrc} alt="group btn"className='group-btn-icon' />
       </button>
     );
   };
@@ -260,7 +261,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
                 {fixedSelection &&
                   fixedSelection.day === dIdx &&
                   hIdx === fixedSelection.hour && (
-                    <img
+                    <Image
                       src={heartSrc}
                       alt="heart"
                       style={{

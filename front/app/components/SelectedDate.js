@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import moment from "moment";
 import "./SelectedDate.css";
 
@@ -10,14 +10,7 @@ const SelectDate = ({ selectedDate, onSelect, onClose, onActive }) => {
   const [endDate, setEndDate] = useState(currentDate);
   const [selectedDays, setSelectedDays] = useState({ start: startDate, end: endDate });
 
-  useEffect(() => {
-    generateDatePicker();
-    setSelectedDays({ start: startDate, end: endDate });
-    console.log(startDate);
-    // console.log(endDate);
-  }, [startDate, endDate]);
-
-  const generateDatePicker = () => {
+  const generateDatePicker = useCallback(() => {
     const startOfMonth = currentDate.clone().startOf("month");
     const endOfMonth = currentDate.clone().endOf("month");
     const startDay = startOfMonth.day();
@@ -31,7 +24,15 @@ const SelectDate = ({ selectedDate, onSelect, onClose, onActive }) => {
       days.push(i);
     }
     return days;
-  };
+  }, [currentDate]);
+
+  useEffect(() => {
+    generateDatePicker();
+    setSelectedDays({ start: startDate, end: endDate });
+    console.log(startDate);
+    // console.log(endDate);
+  }, [startDate, endDate, generateDatePicker]);
+
 
   const prevMonth = () => {
     setCurrentDate(currentDate.clone().subtract(1, "month"));

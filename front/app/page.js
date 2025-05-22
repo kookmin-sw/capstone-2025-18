@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import TimeTable from "./components/TimeTable";
 import Calendar from "./components/Calendar";
-import "./page.css";
+import Image from 'next/image';
 
 export default function MainPage() {
   const router = useRouter();
@@ -73,7 +73,7 @@ export default function MainPage() {
               onClick={() => handleTabClick(tab)}
               className={isActive ? "active" : ""}
             >
-              <img src={iconSrc} alt={`${tab} icon`} className="tab-icon" />
+              <Image src={iconSrc} alt={`${tab} icon`} className="tab-icon" />
               <span>{label}</span>
             </button>
           );

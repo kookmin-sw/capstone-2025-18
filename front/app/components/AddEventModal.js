@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import './AddEventModal.css';
 
 const COLOR_PALETTE = ['#d3d3d3', '#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#9775fa', '#f783ac'];
@@ -78,10 +79,10 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
 
         <div className="modal-actions">
           <button onClick={onClose}>
-            <img src={icon_cancel_black} className='modal-close-btn'/>
+            <Image src={icon_cancel_black} alt="close btn" className='modal-close-btn'/>
           </button>
           <button onClick={handleSubmit}>
-            <img src={icon_check_black} className='modal-submit-btn' />
+            <Image src={icon_check_black} alt='save btn' className='modal-submit-btn' />
           </button>
         </div>
 

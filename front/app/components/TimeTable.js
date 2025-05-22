@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import moment from 'moment';
 import './TimeTable.css';
 import AddEventModal from './AddEventModal';
@@ -181,7 +182,7 @@ const TimeTable = () => {
           <button onClick={handleCalendarToggle} className="timetable-show-calendar">▼</button>
         </div>
         <button className="timetable-add-event-btn" onClick={handleAddEvent}>
-          <img src={icon_plus_thin} />
+          <Image src={icon_plus_thin} alt='add event btn' />
         </button>
         {showCalendar && (
           <div

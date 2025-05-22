@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 import api from "@/lib/api";
 import GroupList from "../components/GroupList";
 import Profile from "../components/Profile";
@@ -110,7 +111,7 @@ export default function GroupPage() {
     <div className="group-page-container">
       <div className="group-page-header">
         <button onClick={() => router.push("/")} aria-label="뒤로가기">
-          <img src={icon_back_black} className="header-icon" />
+          <Image src={icon_back_black} alt="back btn" className="header-icon" />
         </button>
         <h2 className="text-center font-bold">내 그룹</h2>
         <button
@@ -119,7 +120,7 @@ export default function GroupPage() {
             setTimeout(() => setProfileVisible(true), 10);
           }}
         >
-          <img src={icon_person} className="header-icon" />
+          <Image src={icon_person} alt="person btn" className="header-icon" />
         </button>
       </div>
 
@@ -134,11 +135,11 @@ export default function GroupPage() {
       <div className="fixed bottom-0 left-0 w-full z-10">
         <div className="w-80 mx-auto px-4 py-3 flex justify-between">
           <button onClick={() => setShowJoinPopup(true)} className="groupList-btn">
-            <img src={icon_search} />
+            <Image src={icon_search} alt="search btn"/>
             그룹 찾기
           </button>
           <button onClick={() => setShowCreatePopup(true)} className="groupList-btn">
-            <img src={icon_plus} />
+            <Image src={icon_plus} alt="add btn"/>
             그룹 생성
           </button>
         </div>

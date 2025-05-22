@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Image from 'next/image';
 import moment from "moment";
 import SelectedDate from "./SelectedDate";
 import './AddEventModal.css';
@@ -39,10 +40,10 @@ export default function EventModal({ onClose, onSave }) {
       <div className="modal-content">
         <div className="modal-actions">
             <button onClick={onClose}>
-              <img src={icon_cancel_black} className='modal-close-btn'/>
+              <Image src={icon_cancel_black} alt="close modal" className='modal-close-btn'/>
             </button>
             <button onClick={handleSave}>
-              <img src={icon_check_black} className='modal-submit-btn' />
+              <Image src={icon_check_black} alt="save btn" className='modal-submit-btn' />
             </button>
         </div>
         <h4 onClick={handleCalendar} className="modal-title">

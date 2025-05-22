@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 import LoginPopup from "./LoginPopup";
 import api from "@/lib/api";
 
@@ -23,7 +24,7 @@ export default function Profile({
       }
     };
     fetchProfile();
-  }, []);
+  }, [setNickname]);
 
   const handleLoginSuccess = () => {
     setShowLoginPopup(false);
@@ -67,7 +68,7 @@ export default function Profile({
         <div className="flex flex-col items-center mb-6">
           <div className="w-24 h-24 bg-gray-300 rounded-full mb-3 overflow-hidden flex items-center justify-center text-black text-sm font-semibold">
             {hasProfileImage ? (
-              <img
+              <Image
                 src={selectedImage || "/profile.png"}
                 className="object-cover w-full h-full"
                 onError={() => {
