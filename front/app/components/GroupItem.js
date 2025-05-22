@@ -14,7 +14,8 @@ export default function GroupItem({
         onClick={() => toggleGroup(group.id)}
         className="group-item-header"
       >
-        {group.name} <span>{group.members}</span>
+        {group.name} 
+        {/* <span>{group.members}</span> */}
       </button>
       {openGroup === group.id && (
         <div>

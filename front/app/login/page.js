@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from 'next/image';
 import api from "@/lib/api";
 
 export default function LoginPage() {
@@ -59,13 +60,13 @@ export default function LoginPage() {
         <div className="text-center text-sm mt-4">또는 소셜 계정으로 로그인</div>
         <div className="flex justify-around">
           <button onClick={() => handleSocialLogin("kakao")}>
-            <img src="/icons/kakao.png" alt="kakao" className="w-8" />
+            <Image src="/icons/kakao.png" alt="kakao"  width={32} height={32}  />
           </button>
           <button onClick={() => handleSocialLogin("google")}>
-            <img src="/icons/google.png" alt="google" className="w-8" />
+            <Image src="/icons/google.png" alt="google"  width={32} height={32}  />
           </button>
           <button onClick={() => handleSocialLogin("naver")}>
-            <img src="/icons/naver.png" alt="naver" className="w-8" />
+            <Image src="/icons/naver.png" alt="naver" width={32} height={32}  />
           </button>
         </div>
       </div>
