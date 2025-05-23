@@ -1,7 +1,9 @@
 'use client'
 import React, { useState, useEffect } from 'react';
+import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import moment from 'moment';
+import api from '@/lib/api';
 import './TimeTable.css';
 import AddEventModal from './AddEventModal';
 import MiniCalendar from './MiniCalendar';
@@ -14,8 +16,9 @@ const defaultTags = [
 ];
 
 const TimeTable = () => {
+  const router = useRouter();
   const [events, setEvents] = useState([]);
-  const [tags, setTags] = useState(defaultTags);
+  const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedDate, setSelectedDate] = useState(moment());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -27,34 +30,149 @@ const TimeTable = () => {
   const [modalDefaults, setModalDefaults] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [currentDate, setCurrentDate] = useState(moment());
-
+  
   const handleAddEvent = () => {
     setModalDefaults(null);
     setEditingIndex(null);
     setShowModal(true);
   };
+
+  let hasDefaultCreated = false;
+  const fetchTags = async () => {
+    try {
+      const res = await api.get('/tags'); // 자동으로 credentials 포함
+      const data = res.data;
+      console.log(res.status);
+      console.log(res.data);
+      if (!Array.isArray(res.data)) {
+        console.warn("서버 응답이 배열이 아님:", res.data);
+        return;
+      }
+      const hasDefault = data.some(
+        t => t.name?.trim() === "기본" && t.color?.toLowerCase() === "#acacac"
+      );
+      console.log("태그 응답:", data);
+
+
+      if (!hasDefault && !hasDefaultCreated) {
+        hasDefaultCreated = true;
+        const postRes = await api.post('/tags', {
+          name: '기본',
+          color: '#acacac'
+        });
+        console.log("add default");
+        const posted = postRes.data;
+        const refreshed = await api.get('/tags'); 
+        setTags(refreshed.data);
+        window.location.reload();
+      } else {
+        setTags(data);
+      }
+
+
+      setTags(data.map(tag => ({
+        id: tag._id || tag.id,
+        name: tag.name,
+        color: tag.color
+      })));
+    } catch (err) {
+      console.error("태그 목록 불러오기 실패:", err.response?.data || err.message);
+    }
+  };
+
   useEffect(() => {
     console.log('events:', events);
   }, [events]);
 
-  const handleSaveEvent = (event) => {
+  useEffect(() => {
+    fetchTags();
+  }, []);
 
-    // console.log("handle");
-    if (editingIndex !== null) {
-      const newEvents = [...events];
-      newEvents[editingIndex] = event;
-      setEvents(newEvents);
-    } else {
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const startOfWeek = selectedDate.clone().startOf('week').format('YYYY-MM-DD');
+      try {
+        const res = await api.get(`/schedules/weekly?start=${startOfWeek}`);
+        const schedules = res.data;
+        console.log(res);
+
+        const parsed = schedules.map(s => {
+          const start = moment(s.start);
+          const end = moment(s.end);
+          return {
+            title: s.title,
+            day: start.day(),
+            startHour: start.hour(),
+            startMinute: start.minute(),
+            endHour: end.hour(),
+            endMinute: end.minute(),
+            tag: s.tags[0] || { name: '기본', color: '#ccc' } // 첫 태그만 적용
+          };
+        });
+
+        setEvents(parsed);
+      } catch (err) {
+        console.error("주간 일정 불러오기 실패:", err);
+      }
+    };
+
+    fetchEvents();
+
+  }, [selectedDate]);
+
+
+
+  const handleSaveEvent = async (event) => {
+    try {
+      const weeklyStart = `${String(event.startHour).padStart(2, '0')}:${String(event.startMinute).padStart(2, '0')}`;
+      const weeklyEnd = `${String(event.endHour).padStart(2, '0')}:${String(event.endMinute).padStart(2, '0')}`;
+      const dayStr = `${event.day}`;
+      const tagName = event.tag.name;
+      const tagColor = event.tag.color;
+
+      const payload = {
+        title: event.title,
+        type: 'weekly',
+        weeklyStart,
+        weeklyEnd,
+        daysOfWeek: dayStr,
+        tagNames: tagName,
+        tagColors: tagColor
+      };
+
+      await api.post('/schedules', payload);
+
+      // 성공 시 로컬 추가
       setEvents(prev => [...prev, event]);
+      setShowModal(false);
+      setEditingIndex(null);
+
+      console.log("success to add weekly");
+    } catch (err) {
+      console.error("일정 저장 실패", err.response?.data || err.message);
     }
-    // console.log(event);
-    setEditingIndex(null);
-    setShowModal(false);
   };
 
-  const handleAddTag = (newTag) => {
-    setTags(prev => [...prev, newTag]);
+  const handleAddTag = async (newTag) => {
+    try {
+      // 서버에 태그 POST
+      await fetch("http://localhost:8080/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: newTag.name,
+          color: newTag.color
+        })
+      });
+
+      // POST 성공 후 전체 태그 목록 다시 
+      await fetchTags(); 
+    } catch (err) {
+      console.error("태그 추가 실패", err);
+    }
   };
+
 
   const toggleTagFilter = (tagId) => {
     setSelectedTags(prev =>
@@ -161,7 +279,6 @@ const TimeTable = () => {
       if (!placed) layout.push([ev]);
     }
     // console.log('layout', layout);
-
     return layout;
   };
 
@@ -201,9 +318,9 @@ const TimeTable = () => {
           </div>
         )}
         <div className="tag-filter-buttons">
-          {tags.map((tag) => (
+          {tags.map((tag, i) => (
             <button
-              key={tag.id}
+              key={tag.id || tag._id || `${tag.name}-${i}`}
               className={`tag-option-btn ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
               style={{ backgroundColor: tag.color }}
               onClick={() => toggleTagFilter(tag.id)}
@@ -259,18 +376,19 @@ const TimeTable = () => {
                         const evStart = ev.startHour * 60 + (ev.startMinute || 0);
                         const evEnd = ev.endHour * 60 + (ev.endMinute || 0);
                         const topIndex = Math.floor(evStart / 10);
-                        if (topIndex !== hIdx * 6) return null;
+                        
+                        if (ev.startHour !== hIdx) return null;
                         const height = ((evEnd - evStart) / 10) * 10;
-                        console.log("mapping-sm",ev.startMinute);
-                        console.log("mapping-ti",topIndex);
+                        // console.log("mapping-sm",ev.startMinute);
+                        // console.log("mapping-ti",topIndex);
                         return (
                           <div
                             key={`${i}-${colIdx}`}
                             className="event-block"
                             style={{
                               position: 'absolute',
-                              top: 0,
-                              height,
+                              top: `${(ev.startMinute || 0)}px`,
+                              height: `${height}px`,
                               width: `calc(${100 / layout.length}% - 4px)`,
                               left: `calc(${(100 / layout.length) * colIdx}% + 2px)`,
                               backgroundColor: ev.tag?.color || '#ccc',

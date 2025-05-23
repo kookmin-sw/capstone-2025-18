@@ -987,6 +987,26 @@ app.get('/schedules/weekly', async (req, res) => {
   }
 });
 
+app.post('/tags', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const { name, color } = req.body;
+
+  try {
+    const result = await db.collection('tags').insertOne({
+      name,
+      color,
+      userId: new ObjectId(req.user._id),
+      createdAt: new Date()
+    });
+
+    res.status(200).json({ message: '태그 생성 완료', insertedId: result.insertedId });
+  } catch (err) {
+    console.error('태그 생성 오류:', err);
+    res.status(500).send('태그 생성 실패');
+  }
+});
+
 
 //태그 리스트 
 app.get('/tags', async (req, res) => {
@@ -1459,7 +1479,7 @@ app.get('/groups/:groupId/vote/status', async (req, res) => {
 
   try {
     const session = await db.collection('vote_sessions').findOne({
-      groupId,
+      groupId: groupObjectId,
       status: 'active'
     });
     if (!session) return res.status(400).send('진행 중인 투표 없음');
@@ -1547,7 +1567,7 @@ app.post('/groups/:groupId/vote/close', async (req, res) => {
     }
 
     const session = await db.collection('vote_sessions').findOne({
-      groupId,
+      groupId: groupObjectId,
       status: 'active'
     });
     if (!session) return res.status(400).send('진행 중인 투표가 없습니다.');
@@ -1623,7 +1643,7 @@ app.get('/groups/:groupId/vote/form', async (req, res) => {
     if (!group) return res.status(404).send('그룹을 찾을 수 없습니다.');
 
     const session = await db.collection('vote_sessions').findOne({
-      groupId,
+      groupId: groupObjectId,
       status: 'active'
     });
 

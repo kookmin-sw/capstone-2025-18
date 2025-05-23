@@ -50,8 +50,10 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
       try {
         const res = await api.get(`/groups/${groupId}/vote/status`);
         console.log(res.status);
-        if (res.status === 200) {
+        if (res.status == 200) {
           setVoteActive(true);
+           console.log(voteActive);
+
           if (res.data.myVote) {
             const d = moment(res.data.myVote.start);
             setFixedSelection({ day: d.day(), hour: d.hour() });
@@ -162,7 +164,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
       setFixedSelection(null);
       setTempSelection(null);
     } catch (err) {
-      console.error('취소 실패', err);
+      console.error('취소 실패:', err.response?.data || err.message);
     }
   };
 
@@ -217,6 +219,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
     setCalendarPosition({ x: rect.left, y: rect.bottom });
     setShowCalendar(!showCalendar);
   };
+           console.log(voteActive);
 
   return (
     <div className="timetable-container group-container">
@@ -241,49 +244,49 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
           </div>
         )}
       </div>
-
-      <div className="timetable-header-grid">
-        <div className="corner-cell"></div>
-        {getWeekDates().map((date, dIdx) => (
-          <div key={dIdx} className="header-cell">
-            {days[dIdx]}<br />
-            <div className="header-date">{date.format('DD')}</div>
-          </div>
-        ))}
+      
+      <div className="grouptable-scroll-wrapper">
+        <div className="timetable-header-grid">
+          <div className="corner-cell"></div>
+          {getWeekDates().map((date, dIdx) => (
+            <div key={dIdx} className="header-cell">
+              {days[dIdx]}<br />
+              <div className="header-date">{date.format('DD')}</div>
+            </div>
+          ))}
+        </div>
+        <div className="timetable-body-grid">
+          {hours.map((hour, hIdx) => (
+            <React.Fragment key={hour}>
+              <div className="time-cell">{hour}</div>
+              {days.map((_, dIdx) => (
+                <div
+                  key={`${dIdx}-${hIdx}`}
+                  className={getCellClass(dIdx, hIdx)}
+                  onClick={() => handleCellClick(dIdx, hIdx)}
+                >
+                  {fixedSelection &&
+                    fixedSelection.day === dIdx &&
+                    hIdx === fixedSelection.hour && (
+                      <Image
+                        src={heartSrc}
+                        alt="heart"
+                        width={30} height={30}
+                        style={{
+                          position: 'absolute',
+                          top: '-14px',
+                          right: '-14px',
+                          zIndex: '1000'
+                        }}
+                      />
+                    )}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
-
-      <div className="timetable-body-grid">
-        {hours.map((hour, hIdx) => (
-          <React.Fragment key={hour}>
-            <div className="time-cell">{hour}</div>
-            {days.map((_, dIdx) => (
-              <div
-                key={`${dIdx}-${hIdx}`}
-                className={getCellClass(dIdx, hIdx)}
-                onClick={() => handleCellClick(dIdx, hIdx)}
-              >
-                {fixedSelection &&
-                  fixedSelection.day === dIdx &&
-                  hIdx === fixedSelection.hour && (
-                    <Image
-                      src={heartSrc}
-                      alt="heart"
-                      width={30} height={30}
-                      style={{
-                        position: 'absolute',
-                        top: '-14px',
-                        right: '-14px',
-                        zIndex: '1000'
-                      }}
-                    />
-                  )}
-              </div>
-            ))}
-          </React.Fragment>
-        ))}
-      </div>
-
-      {renderActionButton()}
+      {voteActive ? renderActionButton() : null}
     </div>
   );
 };
