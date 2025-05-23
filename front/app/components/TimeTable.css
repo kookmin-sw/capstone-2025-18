@@ -156,6 +156,7 @@
   border: 1px solid #eee;
   position: relative;
   cursor: pointer;
+  height: 30px;
 }
 
 .cell.selected {
@@ -177,8 +178,8 @@
   cursor: pointer;
   font-size: 0.75rem;
   line-height: 1.2;
-  z-index: 30;
-  pointer-events: none;
+  z-index: 300;
+  /* pointer-events: none; */
 }
 
 

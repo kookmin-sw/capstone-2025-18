@@ -137,3 +137,11 @@
     border-radius: 9999px; 
     z-index: 40;
 }
+
+.grouptable-scroll-wrapper{
+  overflow-y: auto;
+  max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 34px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}

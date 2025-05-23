@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import api from '@/lib/api';
+
 import PostEditor from '../components/PostEditor';
 import PostList from '../components/PostList';
 import PostViewer from '../components/PostViewer';
@@ -33,6 +34,7 @@ export default function IndividualClient() {
   const [selectedTab, setSelectedTab] = useState("timetable");
   
   const [posts, setPosts] = useState([]);
+  const [voteActive, setVoteActive] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedVotes, setSelectedVotes] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +48,7 @@ export default function IndividualClient() {
   const icon_back = `/icons/back.png`;
   const icon_back_black = `/icons/back-black.png`;
 
+  console.log("렌더링 시 voteActive =", voteActive);
   useEffect(() => {
     if (groupId === "error") return;
 
@@ -100,26 +103,42 @@ export default function IndividualClient() {
         console.error("공유 태그 조회 실패", err);
       }
     };
+    const fetchVoteStatus = async () => {
+      try {
+        const res = await api.get(`/groups/${groupId}/vote/status`);
+        if (res.status === 200) {
+          setVoteActive(true);
+        } else {
+          setVoteActive(false);
+        }
+      } catch (err) {
+        console.warn("투표 상태 조회 실패:", err.response?.status || err.message);
+        setVoteActive(false);
+      }
+    };
+
 
     fetchGroup();
     fetchPosts();
     fetchAuth();
     fetchTags();
     fetchSharedTagIds();
+    fetchVoteStatus();
   }, [groupId]);
   // console.log(groupMembers);
   const toggleTag = (tagId) => {
     setSharedTagIds(prev =>
       prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
     );
+    window.location.reload();
   };
 
   const submitSharedTags = async () => {
     try {
       await api.post(`/groups/${groupId}/share-tags`, { tagIds: sharedTagIds });
-      alert("공유 태그 설정 완료");
+      console.log("공유 태그 설정 완료");
     } catch (err) {
-      alert("공유 태그 설정 실패");
+      console.error("공유 태그 설정 실패");
     }
   };
 
@@ -132,6 +151,16 @@ export default function IndividualClient() {
     }
   };
 
+  const handleCloseVote = async () => {
+    try {
+      const res = await api.post(`/groups/${groupId}/vote/close`);
+      console.log(res.data.message);
+      setVoteActive(false);
+    } catch (err) {
+      console.error("투표 종료 실패");
+    }
+  };
+
   const handleDurationSave = async () => {
     try {
       await api.put(`/groups/${groupId}/meeting-duration`, {
@@ -140,7 +169,7 @@ export default function IndividualClient() {
       });
       setBlockLength(durationHours);
       console.log("회의 길이 저장 완료");
-      setShowSettingPopup(false);
+      // setShowSettingPopup(false);
     } catch (err) {
       console.error("회의 길이 저장 실패", err);
     }
@@ -150,6 +179,7 @@ export default function IndividualClient() {
     try {
       await api.post(`/groups/${groupId}/vote/start`);
       console.log("투표가 시작되었습니다.");
+      window.location.reload();
     } catch (err) {
       console.error("투표 시작 실패");
     }
@@ -185,6 +215,10 @@ export default function IndividualClient() {
       console.error("게시글 삭제 실패", err);
     }
   };
+  
+  useEffect(() => {
+    console.log("voteActive changed:", voteActive);
+  }, [voteActive]);
 
   return (
       <div className="relative w-80 mx-auto mx-h-screen bg-neutral-100 flex flex-col">
@@ -251,15 +285,17 @@ export default function IndividualClient() {
               </div>
 
               <div className="settings-label">그룹 이름</div>
-              <input
-                type="text"
-                value={editGroupName}
-                onChange={(e) => setEditGroupName(e.target.value)}
-                className="settings-input"
-              />
-              <button onClick={handleGroupNameSave} className="settings-btn secondary">
-                그룹 이름 저장
-              </button>
+              <div className="settings-duration-selects">
+                <input
+                  type="text"
+                  value={editGroupName}
+                  onChange={(e) => setEditGroupName(e.target.value)}
+                  className="settings-input"
+                />
+                <button onClick={handleGroupNameSave} className="settings-btn secondary">
+                    바꾸기
+                </button>
+              </div>
 
               <div className="settings-label">참여 코드: {groupCode}</div>
 
@@ -270,30 +306,26 @@ export default function IndividualClient() {
                     <option key={i} value={i}>{i}시간</option>
                   ))}
                 </select>
-                <select value={durationMinutes} onChange={(e) => setDurationMinutes(Number(e.target.value))}>
-                  <option value={0}>0분</option>
-                  <option value={30}>30분</option>
-                </select>
-              </div>
-              <button onClick={handleDurationSave} className="settings-btn secondary mt-2">
-                회의 길이 저장
-              </button>
-              <div className="settings-label">공유할 태그 선택</div>
-            <div className="settings-label">
-              {allTags.map(tag => (
-                <button
-                  key={tag._id}
-                  className={`tag-select-btn ${sharedTagIds.includes(tag._id) ? 'selected' : ''}`}
-                  style={{ backgroundColor: tag.color }}
-                  onClick={() => toggleTag(tag._id)}
-                >
-                  {tag.name}
+                <button onClick={handleDurationSave} className="settings-btn secondary">
+                  길이 저장
                 </button>
-              ))}
-            </div>
-            <button onClick={submitSharedTags} className="settings-btn primary">공유 태그 저장</button>
+              </div>
+              <div className="settings-label">공유할 태그 선택</div>
+              <div className="tag-filter-buttons mt-2">
+                {allTags.map(tag => (
+                  <button
+                    key={tag._id}              
+                    className={`tag-option-btn ${sharedTagIds.includes(tag._id) ? 'selected' : ''}`}
+                    style={{ backgroundColor: tag.color }}
+                    onClick={() => toggleTag(tag._id)}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+              <button onClick={submitSharedTags} className="settings-btn primary share-btn mb-10 mt-4">공유 태그 저장</button>
 
-              <div className="settings-label">그룹 멤버</div>
+            <div className="settings-label">그룹 멤버</div>
             <div className="settings-members-list">
               {groupMembers.map((member) => (
                 <div key={member.userId} className="settings-label">
@@ -310,7 +342,19 @@ export default function IndividualClient() {
 
 
               <div className="settings-buttons">
-                <button onClick={handleStartVote} className="settings-btn primary">회의 투표 시작</button>
+                {voteActive ? (
+                  <button
+                    onClick={handleCloseVote}
+                    className="settings-btn primary"
+                    style={{ backgroundColor: "#adadad", color: "white" }}
+                  >
+                    투표 종료
+                  </button>
+                ) : (
+                  <button onClick={handleStartVote} className="settings-btn primary">
+                    투표 시작
+                  </button>
+                )}
               </div>
             </div>
           </div>
