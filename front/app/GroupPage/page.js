@@ -33,7 +33,8 @@ export default function GroupPage() {
         // console.log(res.data);
       } catch (err) {
         router.push('/login');
-        console.error("닉네임 조회 실패", err);
+        // console.error("닉네임 조회 실패", err);
+        // 로그인해제 푸쉬
       }
     };
 
