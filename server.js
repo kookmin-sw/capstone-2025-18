@@ -4,6 +4,11 @@ const { MongoClient, ObjectId } = require('mongodb')
 const methodOverride = require('method-override')
 const bcrypt = require('bcrypt') 
 const crypto = require('crypto');
+const multer = require('multer');
+const path = require('path');
+const upload = multer({
+  dest: path.join(__dirname, 'uploads/')
+});
 require('dotenv').config() 
 
 app.use(express.static(__dirname + '/public'))
@@ -2019,4 +2024,74 @@ app.post('/posts/:postId/votes', async (req, res) => {
     console.error(err);
     res.status(500).send('투표 저장 실패');
   }
+});
+
+//시간표 업로드
+let latestImagePath = '';
+
+app.post('/upload-timetable-image', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).send('이미지가 없습니다.');
+
+  latestImagePath = req.file.path; // 예: uploads/abc123.png
+  console.log('🖼️ 업로드된 이미지:', latestImagePath);
+  res.status(200).json({ image_path: latestImagePath });
+});
+
+//시간표 이미지 get
+app.get('/upload-timetable-image', (req, res) => {
+  if (!latestImagePath) return res.status(404).send('업로드된 이미지가 없습니다.');
+
+  res.status(200).json({ image_path: latestImagePath });
+});
+
+//분석 결과 저장
+app.post('/upload-result', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  let scheduleList;
+
+  try {
+    // textarea로 넘어온 JSON 문자열을 수동 파싱
+    scheduleList = JSON.parse(req.body.data);
+    if (!Array.isArray(scheduleList)) throw new Error('배열이 아님');
+  } catch (err) {
+    return res.status(400).send('❌ JSON 파싱 실패: ' + err.message);
+  }
+
+  try {
+    for (const item of scheduleList) {
+      const [startHour, startMinute] = item.start.split(':').map(Number);
+      const [endHour, endMinute] = item.end.split(':').map(Number);
+
+      const start = new Date(2000, 0, 1, startHour, startMinute);
+      const end = new Date(2000, 0, 1, endHour, endMinute);
+
+      await db.collection('schedules').insertOne({
+        userId: new ObjectId(req.user._id),
+        title: item.title,
+        type: 'weekly',
+        start,
+        end,
+        daysOfWeek: [item.day],
+        tagIds: [],
+        createdAt: new Date()
+      });
+    }
+
+    res.status(200).send('✅ 시간표 일정이 DB에 저장되었습니다!');
+  } catch (err) {
+    console.error('❌ 시간표 저장 오류:', err);
+    res.status(500).send('DB 저장 실패');
+  }
+});
+
+
+//업로드 테스트
+app.get('/upload-test', (req, res) => {
+  res.render('upload-test.ejs');
+});
+
+//분석데이터 저장 테스트 
+app.get('/upload-result-test', (req, res) => {
+  res.render('upload-result-test.ejs');
 });
