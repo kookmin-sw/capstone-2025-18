@@ -9,6 +9,7 @@ from PIL import Image
 import subprocess
 import platform
 import shutil
+import pprint
 
 class TimetableImagePreprocessor():
     # def __init__(self):
@@ -159,18 +160,20 @@ class TimetableImagePreprocessor():
         일정 박스, 요일 박스, 시간대 박스 저장 (빈 이미지 자동 필터링)
         :return: self.temp_crop_dir : 저장된 이미지 폴더 경로
         """
-        self.save_cropped_boxes(self.boxes, "box")
-        self.save_cropped_boxes(self.day_word_boxes, "day")
-        self.save_cropped_boxes(self.time_word_boxes, "time")
-        return self.temp_dir
+        boxes = self.save_cropped_boxes(self.boxes, "box")
+        days = self.save_cropped_boxes(self.day_word_boxes, "day")
+        times = self.save_cropped_boxes(self.time_word_boxes, "time")
+
+        return {
+            "subjects": boxes,
+            "days": days,
+            "times": times
+        }
 
     def save_cropped_boxes(self, boxes, prefix):
-        """
-        박스 리스트에서 이미지 저장 (빈 이미지 자동 제외)
-        :param boxes: [(x1, y1, x2, y2), ...]
-        :param prefix: 저장 파일명 앞에 붙을 문자열 (box / day / time 등)
-        """
         saved_idx = 1
+        saved_boxes = {}  # ⬅️ 추가: 실제 저장된 박스만 저장
+
         for (x1, y1, x2, y2) in sorted(boxes, key=lambda b: (b[1], b[0])):
             roi = self.img[y1:y2, x1:x2]
             roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
@@ -181,11 +184,14 @@ class TimetableImagePreprocessor():
                 print(f"🗑️ 삭제됨 (빈 이미지): {prefix}_{saved_idx}.png")
                 continue
 
-            path = os.path.join(self.temp_dir, f"{prefix}_{saved_idx:02}.png")
+            filename = f"{prefix}_{saved_idx:02}.png"
+            path = os.path.join(self.temp_dir, filename)
             cv2.imwrite(path, roi)
             print(f"✅ 저장 완료: {path}")
+            saved_boxes[filename] = (x1, y1, x2, y2)
             saved_idx += 1
 
+        return saved_boxes  # ⬅️ 실제로 저장된 좌표만 리턴
 
     def open_folder(self):
         """
@@ -213,14 +219,14 @@ class TimetableImagePreprocessor():
         self.make_temp_folder()
         # self.detect_grid_lines()
         self.extract_text_boxes()
-        self.save_temp_image()
+        bbox_dict = self.save_temp_image()
         # self.delete_empty_images()
         # self.open_folder()
 
-        return self.temp_dir
+        return bbox_dict, self.temp_dir
 
 
 
 
 # test = TimetableImagePreprocessor()
-# test.preprocess("sample_img/sample4.png")
+# test.preprocess("sample_img/sample3.png")
