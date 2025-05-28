@@ -4,6 +4,8 @@ const { MongoClient, ObjectId } = require('mongodb')
 const methodOverride = require('method-override')
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });  
 require('dotenv').config() 
 
 app.use(express.static(__dirname + '/public'))
@@ -2072,4 +2074,39 @@ app.post("/groups/:groupId/kick", async (req, res) => {
     console.error("강퇴 실패:", err);
     res.status(500).json({ message: "서버 오류" });
   }
+});
+
+//시간표 이미지 업로드
+let latestImageData = null;
+app.post('/upload-timetable-image', upload.single('image'), (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  try {
+    const bboxDict = req.body.bbox_dict
+      ? JSON.parse(req.body.bbox_dict)
+      : {};
+
+    const imagePath = req.file.path;  // multer가 저장한 경로
+
+    latestImageData = {
+      image_paths: [imagePath],
+      bbox_dict: bboxDict
+    };
+
+    console.log('✅ 이미지 및 bbox 저장됨:', latestImageData);
+
+    res.status(200).json({ message: '업로드 완료', path: imagePath });
+  } catch (err) {
+    console.error('❌ 업로드 실패:', err);
+    res.status(500).send('업로드 처리 중 오류 발생');
+  }
+});
+
+//파이썬에서 이미지 받기
+app.get('/get-image-data', (req, res) => {
+  if (!latestImageData) {
+    return res.status(404).json({ message: '이미지 데이터가 아직 없습니다.' });
+  }
+
+  res.status(200).json(latestImageData);
 });
