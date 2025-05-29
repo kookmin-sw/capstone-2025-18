@@ -98,6 +98,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
       classes.push('unavailable');
       if (hIdx === top) classes.push('unavailable-radius-top');
       else if (hIdx === bottom) classes.push('unavailable-radius-bottom');
+    
     }
     if (!isStartAvailable(dIdx, hIdx)) {
       classes.push('not-allowed');
@@ -108,6 +109,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
       if (hIdx === top) classes.push('fixed-radius-top');
       else if (hIdx === bottom) classes.push('fixed-radius-bottom');
       else if (hIdx > top && hIdx < bottom) classes.push('fixed-radius-middle');
+      console.log(hIdx);
     }
     if (tempSelection && tempSelection.day === dIdx) {
       const top = tempSelection.hour;
@@ -219,7 +221,7 @@ const GroupTable = ({ groupId, blockLength = 1 }) => {
     setCalendarPosition({ x: rect.left, y: rect.bottom });
     setShowCalendar(!showCalendar);
   };
-           console.log(voteActive);
+  console.log("투표 상태",voteActive);
 
   return (
     <div className="timetable-container group-container">
