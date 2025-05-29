@@ -840,6 +840,7 @@ app.post('/schedules', async (req, res) => {
       schedule.end = new Date(2000, 0, 1, endHour, endMinute);
       schedule.daysOfWeek = daysOfWeek.split(',').map(x => parseInt(x.trim()));
     }
+    console.log('💾 저장할 schedule:', schedule);
 
     await db.collection('schedules').insertOne(schedule);
     res.status(200).json({ message: '일정 등록 완료' });
@@ -972,6 +973,81 @@ app.get('/schedules/monthly', async (req, res) => {
   }
 });
 
+app.delete('/schedules/:id', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+  const id = req.params.id;
+
+  try {
+    await db.collection('schedules').deleteOne({
+      _id: new ObjectId(id),
+      userId: new ObjectId(req.user._id)
+    });
+    res.status(200).json({ message: '삭제 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('삭제 실패');
+  }
+});
+
+app.put('/schedules/:id', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const scheduleId = req.params.id;
+  const {
+    title, type, monthlyStart, monthlyEnd,
+    tagNames, tagColors
+  } = req.body;
+
+  try {
+    const tags = (tagNames || '').split(',').map((name, i) => ({
+      name: name.trim(),
+      color: (tagColors || '').split(',')[i]?.trim() || '#000000'
+    }));
+
+    const tagIds = [];
+    for (const tag of tags) {
+      if (!tag.name) continue;
+
+      const existing = await db.collection('tags').findOne({
+        userId: new ObjectId(req.user._id),
+        name: tag.name
+      });
+
+      if (existing) {
+        tagIds.push(existing._id);
+      } else {
+        const result = await db.collection('tags').insertOne({
+          userId: new ObjectId(req.user._id),
+          name: tag.name,
+          color: tag.color
+        });
+        tagIds.push(result.insertedId);
+      }
+    }
+
+    const updateDoc = {
+      title,
+      tagIds,
+      updatedAt: new Date()
+    };
+
+    if (type === 'monthly') {
+      updateDoc.start = new Date(monthlyStart);
+      updateDoc.end = new Date(monthlyEnd);
+    }
+
+    await db.collection('schedules').updateOne(
+      { _id: new ObjectId(scheduleId), userId: new ObjectId(req.user._id) },
+      { $set: updateDoc }
+    );
+
+    res.status(200).json({ message: '수정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('수정 실패');
+  }
+});
+
 
 function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
   const results = [];
@@ -1068,6 +1144,7 @@ app.get('/schedules/weekly', async (req, res) => {
         const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
         for (const inst of instances) {
           expanded.push({
+            id: sch._id.toString(),
             title: inst.title,
             start: inst.start,
             end: inst.end,
@@ -1076,6 +1153,7 @@ app.get('/schedules/weekly', async (req, res) => {
         }
       } else if (sch.type === 'monthly') {
         expanded.push({
+          id: sch._id.toString(),
           title: sch.title,
           start: sch.start,
           end: sch.end,
@@ -2189,7 +2267,7 @@ app.get('/upload-test', (req, res) => {
 app.get('/upload-result-test', (req, res) => {
   res.render('upload-result-test.ejs');
 });
-=======
+
 // 그룹장 넘기기
 app.post("/groups/:groupId/transfer", async (req, res) => {
   if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}

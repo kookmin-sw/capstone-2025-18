@@ -1,10 +1,10 @@
 :root {
-    --header-height: 60px;
+    --header-height: 80px;
     --tabbar-height: 80px;
   }
   
 .group-page-container {
-  width: 320px;
+  width: 100vw;
   margin: 0 auto;
   background-color: #202020;
   color: #202020;
@@ -22,7 +22,7 @@
   color: #202020;
   height: var(--header-height);
   
-  padding: 0.5rem 0.75rem; 
+  padding: 0.5rem 30px; 
   border-bottom-left-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
 }
