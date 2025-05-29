@@ -11,6 +11,7 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
   const [daysSelected, setDaysSelected] = useState([]);
   const [start, setStart] = useState(defaultStart ?? 0);
   const [end, setEnd] = useState(defaultEnd ?? 1);
+  
   const [tagIndex, setTagIndex] = useState(0);
   const [showTagCreator, setShowTagCreator] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -91,7 +92,7 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
     <div className="modal-overlay">
       <div className="modal-content">
 
-        <div className="modal-actions">
+        <div className="modal-actions" onClick={onClose}>
           <button onClick={onClose}>
             <Image src={icon_cancel_black} alt="close btn" width={20} height={20} className='modal-close-btn'/>
           </button>
@@ -101,106 +102,108 @@ const AddEventModal = ({ onClose, onSave, tags, onAddTag, defaultDay, defaultSta
           </button>
         </div>
 
+        <div className='add-input-section'>
+          <label> 제목</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} />
 
-        <label>제목</label>
-        <input value={title} onChange={e => setTitle(e.target.value)} />
+          {!isFromDrag && (
+            <>
+              <label> 요일</label>
+              <div className="day-selector">
+                {DAYS.map((d, i) => (
+                  <button
+                    key={i}
+                    className={`day-btn ${daysSelected.includes(i) ? 'selected' : ''}`}
+                    onClick={() => toggleDay(i)}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          
+          <div className='add-event-time'> 
+            <div className='add-event-time-start'>
+              <label>시작 시간</label>
 
-        {!isFromDrag && (
-          <>
-            <label>요일</label>
-            <div className="day-selector">
-              {DAYS.map((d, i) => (
+              <div className="time-selector">
+                <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
+                  {Array.from({ length: 25 }, (_, i) => (
+                      <option key={i} value={i}>{i}시</option>
+                  ))}
+                </select>
+                <select value={startMinute} onChange={(e) => setStartMinute(Number(e.target.value))}>
+                  {[0, 10, 20, 30, 40, 50].map((m) => (
+                    <option key={m} value={m}>{m}분</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className='add-event-time-end'>
+              <label>종료 시간</label>
+              <div className="time-selector">
+                <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
+                  {Array.from({ length: 25 }, (_, i) => (
+                    <option key={i} value={i}>{i}시</option>
+                  ))}
+                </select>
+                <select value={endMinute} onChange={(e) => setEndMinute(Number(e.target.value))}>
+                  {[0, 10, 20, 30, 40, 50].map((m) => (
+                    <option key={m} value={m}>{m}분</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+
+          </div>
+
+          <div className="tag-options">
+            <div className="tag-options">
+              {tags.map((tag, i) => (
                 <button
-                  key={i}
-                  className={`day-btn ${daysSelected.includes(i) ? 'selected' : ''}`}
-                  onClick={() => toggleDay(i)}
+                  key={tag.id ?? tag._id ?? `${tag.name}-${i}`}
+                  className={`tag-btn ${tagIndex === i ? 'selected' : ''}`}
+                  style={{ backgroundColor: tag.color }}
+                  onClick={() => setTagIndex(i)}
                 >
-                  {d}
+                  {tag.name}
                 </button>
               ))}
+              <button className="add-tag-btn" onClick={() => setShowTagCreator(true)}>+ 태그 추가</button>
             </div>
-          </>
-        )}
+          </div>
+
+          {showTagCreator && (
+            <div className="tag-creator">
+              <input
+                type="text"
+                placeholder="태그 이름"
+                value={newTagName}
+                onChange={e => setNewTagName(e.target.value)}
+              />
+              <div className="color-palette">
+                {COLOR_PALETTE.map(color => (
+                  <div
+                    key={color}
+                    className={`color-swatch ${newTagColor === color ? 'selected' : ''}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setNewTagColor(color)}
+                  />
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button onClick={handleAddNewTag}>태그 생성</button>
+                <button onClick={() => setShowTagCreator(false)}>
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         
-        <div className='add-event-time'> 
-          <div className='add-event-time-start'>
-            <label>시작 시간</label>
-
-            <div className="time-selector">
-              <select value={start} onChange={e => setStart(parseInt(e.target.value))}>
-                {Array.from({ length: 25 }, (_, i) => (
-                    <option key={i} value={i}>{i}시</option>
-                ))}
-              </select>
-              <select value={startMinute} onChange={(e) => setStartMinute(Number(e.target.value))}>
-                {[0, 10, 20, 30, 40, 50].map((m) => (
-                  <option key={m} value={m}>{m}분</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-          <div className='add-event-time-end'>
-            <label>종료 시간</label>
-            <div className="time-selector">
-              <select value={end} onChange={e => setEnd(parseInt(e.target.value))}>
-                {Array.from({ length: 25 }, (_, i) => (
-                  <option key={i} value={i}>{i}시</option>
-                ))}
-              </select>
-              <select value={endMinute} onChange={(e) => setEndMinute(Number(e.target.value))}>
-                {[0, 10, 20, 30, 40, 50].map((m) => (
-                  <option key={m} value={m}>{m}분</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          
-
-        </div>
-
-        <div className="tag-options">
-          <div className="tag-options">
-            {tags.map((tag, i) => (
-              <button
-                key={tag.id ?? tag._id ?? `${tag.name}-${i}`}
-                className={`tag-btn ${tagIndex === i ? 'selected' : ''}`}
-                style={{ backgroundColor: tag.color }}
-                onClick={() => setTagIndex(i)}
-              >
-                {tag.name}
-              </button>
-            ))}
-            <button className="add-tag-btn" onClick={() => setShowTagCreator(true)}>+ 태그 추가</button>
-          </div>
-        </div>
-
-        {showTagCreator && (
-          <div className="tag-creator">
-            <input
-              type="text"
-              placeholder="태그 이름"
-              value={newTagName}
-              onChange={e => setNewTagName(e.target.value)}
-            />
-            <div className="color-palette">
-              {COLOR_PALETTE.map(color => (
-                <div
-                  key={color}
-                  className={`color-swatch ${newTagColor === color ? 'selected' : ''}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setNewTagColor(color)}
-                />
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button onClick={handleAddNewTag}>태그 생성</button>
-              <button onClick={() => setShowTagCreator(false)}>
-                취소
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

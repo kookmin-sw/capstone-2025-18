@@ -2,6 +2,8 @@
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);          
+  -webkit-backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -10,9 +12,9 @@
 
 .modal-content {
   background: #F9F4E9;
-  padding: 16px;
+  padding: 16px 20px;
   border-radius: 40px 40px 0 0;
-  width: 320px;
+  width: 100vw;
   height: 85vh;
   position: relative;
 
@@ -35,7 +37,7 @@
 
 .modal-content label {
   display: block;
-  margin-top: 16px;
+  margin-top: 20px;
   font-size: 14px;
   font-weight: bold;
 }
@@ -73,7 +75,7 @@
   cursor: pointer;
   font-weight: bold;
   font-size: 14px;
-  width:  34px;
+  width:  calc((100vw - 70px) / 8);
   text-align: center;
 }
 
@@ -189,14 +191,14 @@
 .add-event-time-start {
   display: flex;
   flex-direction: column;
-  width: 140px;
+  width: calc((100vw - 80px) / 2);
   text-align: center;
 }
 
 .add-event-time-end {
   display: flex;
   flex-direction: column;
-  width: 140px;
+  width: calc((100vw - 80px) / 2);
   text-align: center;
 }
 
@@ -292,4 +294,8 @@
   height: 479px;
   overflow-y: scroll;
   scrollbar-width: 0;
+}
+
+.add-input-section{
+  padding: 0 10px;
 }

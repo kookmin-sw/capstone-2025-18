@@ -8,6 +8,11 @@
   pointer-events: none;
   z-index: 1;
   border: none !important;
+  /* border-radius: 15px; */
+}
+
+.unavailable-radius-alone {
+  border-radius: 15px;
 }
 
 .unavailable-radius-top {
@@ -15,7 +20,7 @@
 }
 
 .unavailable-radius-bottom {
-  border-radius: 0 0 15px 15px;
+  border-radius: 0 0 15px 15px; 
 }
 
 
@@ -82,6 +87,7 @@
 }
 
 .group-container {
+  padding: 10px;
   overflow-y: auto;
   max-height: calc(100dvh - var(--group-header-height) - var(--group-tabbar-height));
 }
@@ -143,5 +149,7 @@
   max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 34px);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* align-items: center; */
+  width: 100vw;
+  padding: 10px;
 }

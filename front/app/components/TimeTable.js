@@ -1,6 +1,5 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import moment from 'moment';
 import api from '@/lib/api';
@@ -8,28 +7,25 @@ import './TimeTable.css';
 import AddEventModal from './AddEventModal';
 import MiniCalendar from './MiniCalendar';
 
-const hours = Array.from({ length: 24 }, (_, i) => `${i}`);
 const days = ['일', '월', '화', '수', '목', '금', '토'];
 
-const defaultTags = [
-  { name: '기본', color: '#acacac', id: 'default-tag' }
-];
-
 const TimeTable = () => {
-  const router = useRouter();
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [modalDefaults, setModalDefaults] = useState(null);
+  
   const [selectedDate, setSelectedDate] = useState(moment());
+  const [currentDate, setCurrentDate] = useState(moment());
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarPosition, setCalendarPosition] = useState({ x: 0, y: 0 });
+  
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
+  
   const [showModal, setShowModal] = useState(false);
-  const [modalDefaults, setModalDefaults] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
-  const [currentDate, setCurrentDate] = useState(moment());
   
   const handleAddEvent = () => {
     setModalDefaults(null);
@@ -230,14 +226,15 @@ const TimeTable = () => {
   const handleEventClick = (e, index) => {
     e.stopPropagation();
     const ev = events[index];
+    if (!ev) return;
     setModalDefaults({
       defaultDay: ev.day,
       defaultStart: ev.startHour,
       defaultEnd: ev.endHour,
-      defaultStartMinute: ev.startMin,
-      defaultEndMinute: ev.endMin,
+      defaultStartMinute: ev.startMinute,
+      defaultEndMinute: ev.endMinute,
       defaultTitle: ev.title,
-      defaultTag: ev.tag
+      defaultTag: ev.tag,
     });
     setEditingIndex(index);
     setShowModal(true);
@@ -249,8 +246,9 @@ const TimeTable = () => {
   };
 
   
-  const getOverlappingEvents = (dayEvents) => {
-    const sorted = [...dayEvents].sort((a, b) => {
+  const getOverlappingEvents = (events) => {
+
+    const sorted = [...events].sort((a, b) => {
       const aStart = a.startHour * 60 + (a.startMinute || 0);
       const bStart = b.startHour * 60 + (b.startMinute || 0);
       return aStart - bStart;
@@ -261,26 +259,31 @@ const TimeTable = () => {
     for (const ev of sorted) {
       const evStart = ev.startHour * 60 + (ev.startMinute || 0);
       const evEnd = ev.endHour * 60 + (ev.endMinute || 0);
-      let placed = false;
 
+      let placed = false;
       for (const column of layout) {
-        const overlap = column.some(e => {
+        const overlaps = column.some(e => {
           const eStart = e.startHour * 60 + (e.startMinute || 0);
           const eEnd = e.endHour * 60 + (e.endMinute || 0);
           return !(evEnd <= eStart || evStart >= eEnd);
         });
-        if (!overlap) {
+
+        if (!overlaps) {
           column.push(ev);
           placed = true;
           break;
         }
       }
 
-      if (!placed) layout.push([ev]);
+      if (!placed) {
+        layout.push([ev]);
+      }
     }
-    // console.log('layout', layout);
+
     return layout;
   };
+
+
 
   const isDraggingOver = (dIdx, mIdx) => {
     if (!isDragging || dragStart.day !== dIdx) return false;
@@ -345,14 +348,11 @@ const TimeTable = () => {
         <div className="timetable-body-grid">
           {Array.from({ length: 24 }, (_, hIdx) => (
             <React.Fragment key={hIdx}>
-              <div className="time-cell">
-                {hIdx.toString().padStart(2, '0')}
-              </div>
+              <div className="time-cell">{hIdx.toString().padStart(2, '0')}</div>
               {days.map((_, dIdx) => {
                 const visibleEvents = events.filter(ev => ev.day === dIdx && (selectedTags.length === 0 || selectedTags.includes(ev.tag.id)));
-                const layout = getOverlappingEvents(visibleEvents);
-
-                // console.log('visibleEvents', visibleEvents);
+                const hourEvents = visibleEvents.filter(ev => ev.startHour === hIdx);
+                const layout = getOverlappingEvents(hourEvents);
 
                 return (
                   <div
@@ -371,19 +371,19 @@ const TimeTable = () => {
                         />
                       );
                     })}
+
                     {layout.map((column, colIdx) =>
                       column.map((ev, i) => {
                         const evStart = ev.startHour * 60 + (ev.startMinute || 0);
                         const evEnd = ev.endHour * 60 + (ev.endMinute || 0);
-                        const topIndex = Math.floor(evStart / 10);
-                        
-                        if (ev.startHour !== hIdx) return null;
                         const height = ((evEnd - evStart) / 10) * 10;
-                        // console.log("mapping-sm",ev.startMinute);
-                        // console.log("mapping-ti",topIndex);
+
+                        // 이 블럭이 현재 시간대(hIdx)에서 시작하는지 확인
+                        if (ev.startHour !== hIdx) return null;
+
                         return (
                           <div
-                            key={`${i}-${colIdx}`}
+                            key={`${ev.title}-${ev.startHour}-${colIdx}`}
                             className="event-block"
                             style={{
                               position: 'absolute',
@@ -406,7 +406,9 @@ const TimeTable = () => {
               })}
             </React.Fragment>
           ))}
+
         </div>
+
       </div>
 
       {showModal && (
