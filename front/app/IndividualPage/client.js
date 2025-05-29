@@ -130,7 +130,7 @@ export default function IndividualClient() {
     setSharedTagIds(prev =>
       prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
     );
-    window.location.reload();
+    // window.location.reload();
   };
 
   const submitSharedTags = async () => {
@@ -179,6 +179,7 @@ export default function IndividualClient() {
     try {
       await api.post(`/groups/${groupId}/vote/start`);
       console.log("투표가 시작되었습니다.");
+      setShowSettingPopup(false);
       window.location.reload();
     } catch (err) {
       console.error("투표 시작 실패");
@@ -221,7 +222,7 @@ export default function IndividualClient() {
   }, [voteActive]);
 
   return (
-      <div className="relative w-80 mx-auto mx-h-screen bg-neutral-100 flex flex-col">
+      <div className="relative mx-auto mx-h-screen bg-neutral-100 flex flex-col">
         <div className="group-header">
           <button onClick={() => router.back()}>
             <Image src={icon_back} alt="back btn" width={18} height={30} className="group-header-icon" />
@@ -296,10 +297,7 @@ export default function IndividualClient() {
                     바꾸기
                 </button>
               </div>
-
-              <div className="settings-label">참여 코드: {groupCode}</div>
-
-              <div className="settings-label">회의 길이</div>
+              <div className="settings-label">일정 길이</div>
               <div className="settings-duration-selects">
                 <select value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))}>
                   {[1, 2, 3, 4].map((i) => (
@@ -310,21 +308,28 @@ export default function IndividualClient() {
                   길이 저장
                 </button>
               </div>
-              <div className="settings-label">공유할 태그 선택</div>
-              <div className="tag-filter-buttons mt-2">
-                {allTags.map(tag => (
-                  <button
-                    key={tag._id}              
-                    className={`tag-option-btn ${sharedTagIds.includes(tag._id) ? 'selected' : ''}`}
-                    style={{ backgroundColor: tag.color }}
-                    onClick={() => toggleTag(tag._id)}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
+            
+              <div className='settings-share'>
+                <div className='settings-share-header'>
+                  <div className="settings-label">공유할 태그 선택</div>
+                  <button onClick={submitSharedTags} className="settings-share-btn">공유 태그 저장</button>
+                </div>
+                  <div className="settings-tag-filter-buttons">
+                    {allTags.map(tag => (
+                      <button
+                        key={tag._id}              
+                        className={`settings-tag-option-btn ${sharedTagIds.includes(tag._id) ? 'selected' : ''}`}
+                        style={{ backgroundColor: tag.color }}
+                        onClick={() => toggleTag(tag._id)}
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                    
+                  </div>
               </div>
-              <button onClick={submitSharedTags} className="settings-btn primary share-btn mb-10 mt-4">공유 태그 저장</button>
 
+            <div className="settings-label">참여 코드: {groupCode}</div>
             <div className="settings-label">그룹 멤버</div>
             <div className="settings-members-list">
               {groupMembers.map((member) => (

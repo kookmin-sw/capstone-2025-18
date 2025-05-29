@@ -4,6 +4,11 @@ const { MongoClient, ObjectId } = require('mongodb')
 const methodOverride = require('method-override')
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const multer = require('multer');
+const path = require('path');
+const upload = multer({
+  dest: path.join(__dirname, 'uploads/')
+});
 require('dotenv').config() 
 
 app.use(express.static(__dirname + '/public'))
@@ -214,6 +219,7 @@ app.get('/isAuth', (req, res) => {
 // 카카오
 app.get('/auth/kakao', passport.authenticate('kakao'));
 app.get('/auth/kakao/callback', passport.authenticate('kakao', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -222,6 +228,7 @@ app.get('/auth/kakao/callback', passport.authenticate('kakao', {
 // 구글
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
 app.get('/auth/google/callback', passport.authenticate('google', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -230,6 +237,7 @@ app.get('/auth/google/callback', passport.authenticate('google', {
 // 네이버
 app.get('/auth/naver', passport.authenticate('naver'));
 app.get('/auth/naver/callback', passport.authenticate('naver', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -254,6 +262,15 @@ app.get('/logout', (req, res) => {
     res.redirect('/')  // 로그아웃 후 리디렉션
   })
 })
+
+// 로그인 확인
+app.get('/isAuth', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
 
 // 사용자 프로필
 app.get('/user/profile', async (req, res) => {
@@ -291,6 +308,93 @@ app.put('/user/profile', async (req, res) => {
   }
 });
 
+// 그룹 명 변경
+app.put("/groups/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  const groupId = req.params.id;
+  const { groupName } = req.body;
+
+  if (!groupName || typeof groupName !== "string") {
+    return res.status(400).json({ message: "유효한 그룹 이름을 입력하세요." });
+  }
+
+  try {
+    const result = await db.collection("groups").updateOne(
+      { _id: new ObjectId(groupId) },
+      { $set: { groupName } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    }
+
+    res.json({ message: "그룹 이름이 성공적으로 변경되었습니다." });
+  } catch (err) {
+    console.error("그룹 이름 변경 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹장 넘기기
+app.post("/groups/:groupId/transfer", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    await db.collection("groups").updateOne(
+      { _id: groupId },
+      { $set: { ownerId: new ObjectId(targetUserId) } }
+    );
+    await db.collection("group_members").updateMany(
+      { groupId, userId: { $in: [new ObjectId(req.user._id), new ObjectId(targetUserId)] } },
+      [
+        {
+          $set: {
+            role: {
+              $cond: [
+                { $eq: ["$userId", new ObjectId(targetUserId)] },
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      ]
+    );
+    res.status(200).json({ message: "그룹장을 넘겼습니다." });
+  } catch (err) {
+    console.error("그룹장 변경 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹원 강퇴
+app.post("/groups/:groupId/kick", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    if (String(req.user._id) === String(targetUserId)) {return res.status(400).json({ message: "자기 자신은 강퇴할 수 없습니다." });}
+    const result = await db.collection("group_members").deleteOne({
+      groupId,
+      userId: new ObjectId(targetUserId)
+    });
+    if (result.deletedCount === 0) {return res.status(404).json({ message: "이미 탈퇴된 유저입니다." });}
+    res.status(200).json({ message: "해당 사용자를 강퇴했습니다." });
+  } catch (err) {
+    console.error("강퇴 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
 //생성 테스트
 app.get('/groups/create', (req, res) => {
   if (!req.user) return res.redirect('/login');
@@ -736,6 +840,7 @@ app.post('/schedules', async (req, res) => {
       schedule.end = new Date(2000, 0, 1, endHour, endMinute);
       schedule.daysOfWeek = daysOfWeek.split(',').map(x => parseInt(x.trim()));
     }
+    console.log('💾 저장할 schedule:', schedule);
 
     await db.collection('schedules').insertOne(schedule);
     res.status(200).json({ message: '일정 등록 완료' });
@@ -868,6 +973,81 @@ app.get('/schedules/monthly', async (req, res) => {
   }
 });
 
+app.delete('/schedules/:id', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+  const id = req.params.id;
+
+  try {
+    await db.collection('schedules').deleteOne({
+      _id: new ObjectId(id),
+      userId: new ObjectId(req.user._id)
+    });
+    res.status(200).json({ message: '삭제 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('삭제 실패');
+  }
+});
+
+app.put('/schedules/:id', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인 필요');
+
+  const scheduleId = req.params.id;
+  const {
+    title, type, monthlyStart, monthlyEnd,
+    tagNames, tagColors
+  } = req.body;
+
+  try {
+    const tags = (tagNames || '').split(',').map((name, i) => ({
+      name: name.trim(),
+      color: (tagColors || '').split(',')[i]?.trim() || '#000000'
+    }));
+
+    const tagIds = [];
+    for (const tag of tags) {
+      if (!tag.name) continue;
+
+      const existing = await db.collection('tags').findOne({
+        userId: new ObjectId(req.user._id),
+        name: tag.name
+      });
+
+      if (existing) {
+        tagIds.push(existing._id);
+      } else {
+        const result = await db.collection('tags').insertOne({
+          userId: new ObjectId(req.user._id),
+          name: tag.name,
+          color: tag.color
+        });
+        tagIds.push(result.insertedId);
+      }
+    }
+
+    const updateDoc = {
+      title,
+      tagIds,
+      updatedAt: new Date()
+    };
+
+    if (type === 'monthly') {
+      updateDoc.start = new Date(monthlyStart);
+      updateDoc.end = new Date(monthlyEnd);
+    }
+
+    await db.collection('schedules').updateOne(
+      { _id: new ObjectId(scheduleId), userId: new ObjectId(req.user._id) },
+      { $set: updateDoc }
+    );
+
+    res.status(200).json({ message: '수정 완료' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('수정 실패');
+  }
+});
+
 
 function expandWeeklyToWeek(schedule, weekStart, weekEnd) {
   const results = [];
@@ -964,6 +1144,7 @@ app.get('/schedules/weekly', async (req, res) => {
         const instances = expandWeeklyToWeek(sch, weekStart, weekEnd);
         for (const inst of instances) {
           expanded.push({
+            id: sch._id.toString(),
             title: inst.title,
             start: inst.start,
             end: inst.end,
@@ -972,6 +1153,7 @@ app.get('/schedules/weekly', async (req, res) => {
         }
       } else if (sch.type === 'monthly') {
         expanded.push({
+          id: sch._id.toString(),
           title: sch.title,
           start: sch.start,
           end: sch.end,
@@ -1758,7 +1940,7 @@ app.get('/groups/:groupId/posts', async (req, res) => {
     if (!member) return res.status(403).send('그룹 멤버가 아닙니다.');
 
     const filter = { group_id: groupId };
-    if (onlyNotice) filter.is_notice = true;
+    if (onlyNotice) filter.isNotice = true;
 
     const posts = await db.collection('posts')
       .find(filter)
@@ -2014,6 +2196,76 @@ app.post('/posts/:postId/votes', async (req, res) => {
     console.error(err);
     res.status(500).send('투표 저장 실패');
   }
+});
+
+//시간표 업로드
+let latestImagePath = '';
+
+app.post('/upload-timetable-image', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).send('이미지가 없습니다.');
+
+  latestImagePath = req.file.path; // 예: uploads/abc123.png
+  console.log('🖼️ 업로드된 이미지:', latestImagePath);
+  res.status(200).json({ image_path: latestImagePath });
+});
+
+//시간표 이미지 get
+app.get('/upload-timetable-image', (req, res) => {
+  if (!latestImagePath) return res.status(404).send('업로드된 이미지가 없습니다.');
+
+  res.status(200).json({ image_path: latestImagePath });
+});
+
+//분석 결과 저장
+app.post('/upload-result', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  let scheduleList;
+
+  try {
+    // textarea로 넘어온 JSON 문자열을 수동 파싱
+    scheduleList = JSON.parse(req.body.data);
+    if (!Array.isArray(scheduleList)) throw new Error('배열이 아님');
+  } catch (err) {
+    return res.status(400).send('❌ JSON 파싱 실패: ' + err.message);
+  }
+
+  try {
+    for (const item of scheduleList) {
+      const [startHour, startMinute] = item.start.split(':').map(Number);
+      const [endHour, endMinute] = item.end.split(':').map(Number);
+
+      const start = new Date(2000, 0, 1, startHour, startMinute);
+      const end = new Date(2000, 0, 1, endHour, endMinute);
+
+      await db.collection('schedules').insertOne({
+        userId: new ObjectId(req.user._id),
+        title: item.title,
+        type: 'weekly',
+        start,
+        end,
+        daysOfWeek: [item.day],
+        tagIds: [],
+        createdAt: new Date()
+      });
+    }
+
+    res.status(200).send('✅ 시간표 일정이 DB에 저장되었습니다!');
+  } catch (err) {
+    console.error('❌ 시간표 저장 오류:', err);
+    res.status(500).send('DB 저장 실패');
+  }
+});
+
+
+//업로드 테스트
+app.get('/upload-test', (req, res) => {
+  res.render('upload-test.ejs');
+});
+
+//분석데이터 저장 테스트 
+app.get('/upload-result-test', (req, res) => {
+  res.render('upload-result-test.ejs');
 });
 
 // 그룹장 넘기기
