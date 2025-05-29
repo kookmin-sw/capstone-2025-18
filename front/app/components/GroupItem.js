@@ -14,7 +14,8 @@ export default function GroupItem({
         onClick={() => toggleGroup(group.id)}
         className="group-item-header"
       >
-        {group.name} <span>{group.members}</span>
+        {group.name} 
+        {/* <span>{group.members}</span> */}
       </button>
       {openGroup === group.id && (
         <div>
@@ -23,7 +24,7 @@ export default function GroupItem({
           </p>
           <div className="group-item-actions">
             <button
-              onClick={openExitPopup}
+              onClick={() => openExitPopup(group.id)}
               className="group-exit-btn"
             >
               그룹에서 나가기

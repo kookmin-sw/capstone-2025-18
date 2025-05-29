@@ -1,23 +1,16 @@
 'use client'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import moment from "moment";
-import "./Calendar.css";
+import "./SelectedDate.css";
 
-const SelectDate = ({ selectedDate, onSelect, onClose }) => {
+const SelectDate = ({ selectedDate, onSelect, onClose, onActive }) => {
   const [currentDate, setCurrentDate] = useState(moment(selectedDate));
-  const [isStart, setIsStart] = useState(true);
+  const [isStart, setIsStart] = useState(onActive);
   const [startDate, setStartDate] = useState(currentDate);
   const [endDate, setEndDate] = useState(currentDate);
   const [selectedDays, setSelectedDays] = useState({ start: startDate, end: endDate });
 
-  useEffect(() => {
-    generateDatePicker();
-    setSelectedDays({ start: startDate, end: endDate });
-    console.log(startDate);
-    // console.log(endDate);
-  }, [startDate, endDate]);
-
-  const generateDatePicker = () => {
+  const generateDatePicker = useCallback(() => {
     const startOfMonth = currentDate.clone().startOf("month");
     const endOfMonth = currentDate.clone().endOf("month");
     const startDay = startOfMonth.day();
@@ -31,7 +24,15 @@ const SelectDate = ({ selectedDate, onSelect, onClose }) => {
       days.push(i);
     }
     return days;
-  };
+  }, [currentDate]);
+
+  useEffect(() => {
+    generateDatePicker();
+    setSelectedDays({ start: startDate, end: endDate });
+    console.log(startDate);
+    // console.log(endDate);
+  }, [startDate, endDate, generateDatePicker]);
+
 
   const prevMonth = () => {
     setCurrentDate(currentDate.clone().subtract(1, "month"));
@@ -50,25 +51,38 @@ const SelectDate = ({ selectedDate, onSelect, onClose }) => {
     setEndDate(moment(currentDate).date(day));
   };
 
+
+  const handleTabStart = () => {
+
+    setIsStart(!isStart);
+    console.log(isStart);
+  }
+
   return (
-    <div className="calendar-container">
-      <div className="selected-container">
-        <div onClick={() => setIsStart(true)}>
-          <div className={`selected-label ${isStart ? 'selected-active' : 'selected-inactive'}`}>시작</div>
+    <div className="selected-calendar-container">
+      <div className="calendar-tab-bar">
+        <div
+          className={`calendar-tab ${isStart ? "active-tab" : ""}`}
+          onClick={handleTabStart}
+        >
+          시작
           <div className={`selected-value ${isStart ? 'selected-active' : 'selected-inactive'}`}>{startDate.format('MM월 DD일')}</div>
         </div>
-        <div onClick={() => setIsStart(false)}>
-          <div className={`selected-label ${!isStart ? 'selected-active' : 'selected-inactive'}`}>끝</div>
+        <div
+          className={`calendar-tab ${!isStart ? "active-tab" : ""}`}
+          onClick={handleTabStart}
+        >
+          종료
           <div className={`selected-value ${!isStart ? 'selected-active' : 'selected-inactive'}`}>{endDate.format('MM월 DD일')}</div>
         </div>
       </div>
       <div className="calendar-header">
-        <button onClick={prevMonth} className="nav-btn">&#9665;</button>
-        <h2>{currentDate.format("YYYY년 MM월")}</h2>
-        <button onClick={nextMonth} className="nav-btn">&#9655;</button>
+        <button onClick={prevMonth} className="nav-btn">&#9664;</button>
+        <h4>{currentDate.format("YYYY년 MM월")}</h4>
+        <button onClick={nextMonth} className="nav-btn">&#9654;</button>
       </div>
       
-      <div className="calendar-grid">
+      <div className="selected-calendar-grid">
         {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
           <div key={index}>
             {day}
@@ -83,7 +97,7 @@ const SelectDate = ({ selectedDate, onSelect, onClose }) => {
               {isStart ? 
                 <div
                   key={index}
-                  className={`day day-large ${day ? "active" : "empty"} 
+                  className={`selected-day selected-day-large ${day ? "active" : "empty"} 
                     ${isSelectedStart ? "today" : ""} 
                     ${index % 7 === 0 ? "sunday" : index % 7 === 6 ? "saturday" : ""}`}
                   onClick={() => handleStartDay(day)}
@@ -95,7 +109,7 @@ const SelectDate = ({ selectedDate, onSelect, onClose }) => {
                 :
                 <div
                   key={index}
-                  className={`day day-large ${day ? "active" : "empty"} 
+                  className={`selected-day selected-day-large ${day ? "active" : "empty"} 
                     ${isSelectedEnd ? "today" : ""} 
                     ${index % 7 === 0 ? "sunday" : index % 7 === 6 ? "saturday" : ""}`}
                   onClick={() => handleEndDay(day)}
@@ -108,7 +122,9 @@ const SelectDate = ({ selectedDate, onSelect, onClose }) => {
           );
         })}
       </div>
-      <button onClick={onClose}>닫기</button>
+      <div className="selected-close-btn">
+        <button onClick={onClose}>닫기</button>
+      </div>
     </div>
   );
 };
