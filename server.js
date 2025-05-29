@@ -216,6 +216,7 @@ app.get('/isAuth', (req, res) => {
 // 카카오
 app.get('/auth/kakao', passport.authenticate('kakao'));
 app.get('/auth/kakao/callback', passport.authenticate('kakao', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -224,6 +225,7 @@ app.get('/auth/kakao/callback', passport.authenticate('kakao', {
 // 구글
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
 app.get('/auth/google/callback', passport.authenticate('google', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -232,6 +234,7 @@ app.get('/auth/google/callback', passport.authenticate('google', {
 // 네이버
 app.get('/auth/naver', passport.authenticate('naver'));
 app.get('/auth/naver/callback', passport.authenticate('naver', {
+  successRedirect: 'http://localhost:3000/GroupPage',
   failureRedirect: '/login'
 }), (req, res) => {
   res.redirect(FRONT_BASE_URL);
@@ -256,6 +259,15 @@ app.get('/logout', (req, res) => {
     res.redirect('/')  // 로그아웃 후 리디렉션
   })
 })
+
+// 로그인 확인
+app.get('/isAuth', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
 
 // 사용자 프로필
 app.get('/user/profile', async (req, res) => {
@@ -290,6 +302,94 @@ app.put('/user/profile', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '프로필 업데이트 실패' });
+  }
+});
+
+// 그룹 명 변경
+app.put("/groups/:id", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+
+  const groupId = req.params.id;
+  const { groupName } = req.body;
+
+  if (!groupName || typeof groupName !== "string") {
+    return res.status(400).json({ message: "유효한 그룹 이름을 입력하세요." });
+  }
+
+  try {
+    const result = await db.collection("groups").updateOne(
+      { _id: new ObjectId(groupId) },
+      { $set: { groupName } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    }
+
+    res.json({ message: "그룹 이름이 성공적으로 변경되었습니다." });
+  } catch (err) {
+    console.error("그룹 이름 변경 오류:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹장 넘기기
+app.post("/groups/:groupId/transfer", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    await db.collection("groups").updateOne(
+      { _id: groupId },
+      { $set: { ownerId: new ObjectId(targetUserId) } }
+    );
+    await db.collection("group_members").updateMany(
+      { groupId, userId: { $in: [new ObjectId(req.user._id), new ObjectId(targetUserId)] } },
+      [
+        {
+          $set: {
+            role: {
+              $cond: [
+                { $eq: ["$userId", new ObjectId(targetUserId)] },
+                "admin",
+                "member"
+              ]
+            }
+          }
+        }
+      ]
+    );
+    res.status(200).json({ message: "그룹장을 넘겼습니다." });
+  } catch (err) {
+    console.error("그룹장 변경 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
+  }
+});
+
+// 그룹원 강퇴
+app.post("/groups/:groupId/kick", async (req, res) => {
+  if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
+  const groupId = new ObjectId(req.params.groupId);
+  const { targetUserId } = req.body;
+  try {
+    const group = await db.collection("groups").findOne({ _id: groupId });
+    if (!group) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    if (String(group.ownerId) !== String(req.user._id)) {return res.status(403).json({ message: "당신은 그룹장이 아닙니다." });}
+    if (String(req.user._id) === String(targetUserId)) {return res.status(400).json({ message: "자기 자신은 강퇴할 수 없습니다." });}
+    const result = await db.collection("group_members").deleteOne({
+      groupId,
+      userId: new ObjectId(targetUserId)
+    });
+    if (result.deletedCount === 0) {return res.status(404).json({ message: "이미 탈퇴된 유저입니다." });}
+    res.status(200).json({ message: "해당 사용자를 강퇴했습니다." });
+  } catch (err) {
+    console.error("강퇴 실패:", err);
+    res.status(500).json({ message: "서버 오류" });
   }
 });
 
@@ -1708,6 +1808,7 @@ app.post('/groups/:groupId/posts', async (req, res) => {
 
   const groupId = new ObjectId(req.params.groupId);
   const authorId = new ObjectId(req.user._id);
+  const { title, content, isNotice, isVote, voteOptions } = req.body;
   const { title, content, is_notice, is_vote, voteOptions } = req.body;
 
   try {
@@ -1760,7 +1861,7 @@ app.get('/groups/:groupId/posts', async (req, res) => {
     if (!member) return res.status(403).send('그룹 멤버가 아닙니다.');
 
     const filter = { group_id: groupId };
-    if (onlyNotice) filter.is_notice = true;
+    if (onlyNotice) filter.isNotice = true;
 
     const posts = await db.collection('posts')
       .find(filter)
