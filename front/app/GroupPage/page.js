@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from 'next/image';
+import api from "@/lib/api";
 import GroupList from "../components/GroupList";
 import Profile from "../components/Profile";
 import GroupCreatePopup from "../components/GroupCreatePopup";
@@ -11,13 +13,10 @@ import './group.css';
 
 export default function GroupPage() {
   const router = useRouter();
-
-  const [groups, setGroups] = useState([
-    { id: crypto.randomUUID(), name: "캡스톤 아자아자", members: 4, code: "ABC12" },
-  ]);
   const [nickname, setNickname] = useState("그루비");
-  const [hasProfileImage, setHasProfileImage] = useState(true);
+  const [groups, setGroups] = useState([]);
   const [openGroup, setOpenGroup] = useState(null);
+  const [exitGroupId, setExitGroupId] = useState(null); 
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showJoinPopup, setShowJoinPopup] = useState(false);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -26,40 +25,87 @@ export default function GroupPage() {
   const [profileVisible, setProfileVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const genCode = () => {
-    let code;
-    const existingCode = groups.map((c) => c.code);
-    do {
-      code = crypto.randomUUID().replace(/-/g, "").slice(0, 5).toUpperCase();
-    } while (existingCode.includes(code));
-    return code;
-  };
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await api.get('/me');
+        setNickname(res.data.username);
+        // console.log(res.data);
+      } catch (err) {
+        router.push('/login');
+        // console.error("닉네임 조회 실패", err);
+        // 로그인해제 푸쉬
+      }
+    };
+
+    const fetchGroups = async () => {
+      try {
+        const res = await api.get('/groups');
+        // console.log("aa");
+        // console.log(res.data);
+        setGroups(res.data.map(group => ({
+          id: group.groupId,
+          name: group.groupName,
+          members: group.memberCount,
+          code: group.inviteCode
+        })));
+
+      } catch (err) {
+        console.error("그룹 목록 불러오기 실패", err);
+      }
+    };
+
+    fetchUser();
+    fetchGroups();
+  }, []);
 
   const toggleGroup = (id) => {
     setOpenGroup(openGroup === id ? null : id);
   };
 
-  const exitGroup = () => {
-    setGroups(groups.filter((group) => group.id !== openGroup));
-    setShowExitPopup(false);
-    setOpenGroup(null);
+  const confirmExitGroup = async () => {
+
+  if (!exitGroupId) {
+    console.error("exitGroupId가 정의되지 않음");
+    return;
+  }
+
+    try {
+      await api.post(`/groups/${exitGroupId}/leave`);
+      setGroups(groups.filter((group) => group.id !== exitGroupId));
+      setShowExitPopup(false);
+      setExitGroupId(null);
+      setOpenGroup(null);
+    } catch (err) {
+      console.error("그룹 나가기 실패", err);
+    }
+  };
+
+  const requestExitPopup = (groupId) => {
+    setExitGroupId(groupId);
+    setShowExitPopup(true);
   };
 
   const joinGroup = () => {
     setShowJoinPopup(false);
   };
 
-  const createGroup = () => {
-    const groupName = newGroupName.trim() || "그루비룸";
-    const newGroup = {
-      id: crypto.randomUUID(),
-      name: groupName,
-      members: 1,
-      code: genCode(),
-    };
-    setGroups([...groups, newGroup]);
-    setShowCreatePopup(false);
-    setNewGroupName("");
+  const createGroup = async () => {
+    try {
+      const res = await api.post('/groups', { groupName: newGroupName });
+      const newGroup = {
+        id: res.data.groupId,
+        name: newGroupName.trim() || "그루비룸",
+        members: 1,
+        code: res.data.inviteCode
+      };
+      setGroups([...groups, newGroup]);
+    } catch (err) {
+      console.error("그룹 생성 실패", err);
+    } finally {
+      setShowCreatePopup(false);
+      setNewGroupName("");
+    }
   };
 
   const moveToIndividualPage = (group) => {
@@ -68,23 +114,16 @@ export default function GroupPage() {
     );
   };
 
-  
-
   const icon_person = `/icons/person.png`;
   const icon_back_black = `/icons/back-black.png`;
   const icon_search = `/icons/search.png`;
-  const icon_plus = `/icons/plus.png`
+  const icon_plus = `/icons/plus.png`;
+
   return (
     <div className="group-page-container">
       <div className="group-page-header">
-        <button
-          onClick={() => router.push("/")}
-          aria-label="뒤로가기"
-        >
-          <img
-            src={icon_back_black}
-            className="header-icon" 
-          />
+        <button onClick={() => router.push("/")} aria-label="뒤로가기">
+          <Image src={icon_back_black} alt="back btn" width={18} height={30} className="header-icon" />
         </button>
         <h2 className="text-center font-bold">내 그룹</h2>
         <button
@@ -93,7 +132,7 @@ export default function GroupPage() {
             setTimeout(() => setProfileVisible(true), 10);
           }}
         >
-          <img src={icon_person} className="header-icon" />
+          <Image src={icon_person} alt="person btn" width={30} height={30} className="header-icon" />
         </button>
       </div>
 
@@ -102,17 +141,17 @@ export default function GroupPage() {
         openGroup={openGroup}
         toggleGroup={toggleGroup}
         moveToIndividualPage={moveToIndividualPage}
-        openExitPopup={() => setShowExitPopup(true)}
+        openExitPopup={requestExitPopup}
       />
 
       <div className="fixed bottom-0 left-0 w-full z-10">
         <div className="w-80 mx-auto px-4 py-3 flex justify-between">
           <button onClick={() => setShowJoinPopup(true)} className="groupList-btn">
-            <img src={icon_search} />
+            <Image src={icon_search} width={22} height={22} alt="search btn"/>
             그룹 찾기
           </button>
           <button onClick={() => setShowCreatePopup(true)} className="groupList-btn">
-            <img src={icon_plus} />
+            <Image src={icon_plus} width={22} height={22} alt="add btn"/>
             그룹 생성
           </button>
         </div>
@@ -127,8 +166,8 @@ export default function GroupPage() {
           setSelectedImage={setSelectedImage}
           setShowProfilePopup={setShowProfilePopup}
           setProfileVisible={setProfileVisible}
-          hasProfileImage={hasProfileImage}
-          setHasProfileImage={setHasProfileImage}
+          hasProfileImage={true}
+          setHasProfileImage={() => {}}
         />
       )}
 
@@ -151,7 +190,7 @@ export default function GroupPage() {
       {showExitPopup && (
         <GroupExitPopup
           onCancel={() => setShowExitPopup(false)}
-          onExit={exitGroup}
+          onExit={confirmExitGroup}
         />
       )}
     </div>
