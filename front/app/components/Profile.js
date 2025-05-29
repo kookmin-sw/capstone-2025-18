@@ -19,7 +19,7 @@ export default function Profile({
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch("http://localhost:8080/user/profile", {
+        const res = await fetch("http://54.180.192.103:8080/user/profile", {
           credentials: "include"
         });
 
@@ -47,7 +47,7 @@ export default function Profile({
 
   const saveProfile = async () => {
     try {
-      const res = await fetch("http://localhost:8080/user/profile", {
+      const res = await fetch("http://54.180.192.103:8080/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -68,7 +68,7 @@ export default function Profile({
   };
 
   const handleLogout = async () => {
-    await fetch("http://localhost:8080/logout", { method: "GET", credentials: "include" });
+    await fetch("http://54.180.192.103:8080/logout", { method: "GET", credentials: "include" });
     setNickname("");
     setSelectedImage(null);
     setHasProfileImage(false);

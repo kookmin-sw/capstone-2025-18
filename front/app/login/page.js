@@ -21,7 +21,7 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider) => {
-    window.location.href = `http://localhost:8080/auth/${provider}`;
+    window.location.href = `http://54.180.192.103:8080/auth/${provider}`;
   };
 
   return (

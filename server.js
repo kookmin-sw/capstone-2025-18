@@ -19,7 +19,7 @@ app.use(methodOverride('_method'))
 
 let db;
 const url = process.env.DB_URL;
-const FRONT_BASE_URL = "http://localhost:3000"; //프론트 추후 주소 수정
+const FRONT_BASE_URL = 'https://capstone-2025-18-wxkz.vercel.app'; //프론트 추후 주소 수정
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('tmta');
@@ -41,8 +41,8 @@ const NaverStrategy = require('passport-naver').Strategy;
 const cors = require('cors');
 
 app.use(cors({
-  origin: 'http://localhost:3000', 
-  credentials: true
+  origin: 'https://capstone-2025-18-wxkz.vercel.app',
+  credentials: true 
 }));
 
 app.use(passport.initialize())
@@ -395,6 +395,7 @@ app.post("/groups/:groupId/kick", async (req, res) => {
     res.status(500).json({ message: "서버 오류" });
   }
 });
+
 //생성 테스트
 app.get('/groups/create', (req, res) => {
   if (!req.user) return res.redirect('/login');
@@ -1888,6 +1889,7 @@ app.post('/groups/:groupId/posts', async (req, res) => {
 
   const groupId = new ObjectId(req.params.groupId);
   const authorId = new ObjectId(req.user._id);
+  const { title, content, isNotice, isVote, voteOptions } = req.body;
   const { title, content, is_notice, is_vote, voteOptions } = req.body;
 
   try {
@@ -2324,4 +2326,39 @@ app.post("/groups/:groupId/kick", async (req, res) => {
     console.error("강퇴 실패:", err);
     res.status(500).json({ message: "서버 오류" });
   }
+});
+
+//시간표 이미지 업로드
+let latestImageData = null;
+app.post('/upload-timetable-image', upload.single('image'), (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  try {
+    const bboxDict = req.body.bbox_dict
+      ? JSON.parse(req.body.bbox_dict)
+      : {};
+
+    const imagePath = req.file.path;  // multer가 저장한 경로
+
+    latestImageData = {
+      image_paths: [imagePath],
+      bbox_dict: bboxDict
+    };
+
+    console.log('✅ 이미지 및 bbox 저장됨:', latestImageData);
+
+    res.status(200).json({ message: '업로드 완료', path: imagePath });
+  } catch (err) {
+    console.error('❌ 업로드 실패:', err);
+    res.status(500).send('업로드 처리 중 오류 발생');
+  }
+});
+
+//파이썬에서 이미지 받기
+app.get('/get-image-data', (req, res) => {
+  if (!latestImageData) {
+    return res.status(404).json({ message: '이미지 데이터가 아직 없습니다.' });
+  }
+
+  res.status(200).json(latestImageData);
 });
