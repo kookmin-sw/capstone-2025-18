@@ -156,7 +156,7 @@ const TimeTable = () => {
   const handleAddTag = async (newTag) => {
     try {
       // 서버에 태그 POST
-      await fetch("http://localhost:8080/tags", {
+      await fetch("http://54.180.192.103:8080/tags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

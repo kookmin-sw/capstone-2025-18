@@ -16,7 +16,7 @@ app.use(methodOverride('_method'))
 
 let db;
 const url = process.env.DB_URL;
-const FRONT_BASE_URL = "http://localhost:3000"; //프론트 추후 주소 수정
+const FRONT_BASE_URL = 'https://capstone-2025-18-wxkz.vercel.app'; //프론트 추후 주소 수정
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('tmta');
@@ -38,8 +38,8 @@ const NaverStrategy = require('passport-naver').Strategy;
 const cors = require('cors');
 
 app.use(cors({
-  origin: 'http://localhost:3000', 
-  credentials: true
+  origin: 'https://capstone-2025-18-wxkz.vercel.app',
+  credentials: true 
 }));
 
 app.use(passport.initialize())

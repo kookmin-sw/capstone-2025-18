@@ -7,7 +7,7 @@ export default function LoginPopup({ onClose, onLoginSuccess, onLoginFail }) {
   const [mode, setMode] = useState("login"); // 'login' or 'signup'
 
   const handleAuth = async () => {
-    const url = mode === "login" ? "http://localhost:8080/login" : "http://localhost:8080/register";
+    const url = mode === "login" ? "http://54.180.192.103:8080/login" : "http://54.180.192.103:8080/register";
 
     const res = await fetch(url, {
       method: "POST",
