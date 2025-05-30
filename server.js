@@ -2229,11 +2229,74 @@ app.get('/upload-test', (req, res) => {
   res.render('upload-test.ejs');
 });
 
-//분석데이터 저장 테스트 
-app.get('/upload-result-test', (req, res) => {
-  res.render('upload-result-test.ejs');
+// 분석 데이터 메모리에 저장
+const parsedTimetableMemory = {}; // { userId: [ {...}, {...} ] }
+
+app.post('/upload-result', (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  try {
+    const scheduleList = req.body;
+    if (!Array.isArray(scheduleList)) {
+      return res.status(400).send('❌ 배열 형태의 일정 리스트를 보내야 해요');
+    }
+
+    parsedTimetableMemory[req.user._id.toString()] = scheduleList;
+    res.status(200).send('✅ 메모리에 저장 완료!');
+  } catch (err) {
+    console.error('❌ 메모리 저장 실패:', err);
+    res.status(500).send('서버 오류');
+  }
 });
-=======
+
+//분석 결과 조회
+app.get('/upload-result', (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const data = parsedTimetableMemory[req.user._id.toString()];
+  if (!data) return res.status(404).send('⛔ 분석된 시간표가 없습니다.');
+
+  res.status(200).json(data);
+});
+
+//분석 결과 db에 저장
+app.post('/save-result', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const userId = new ObjectId(req.user._id);
+  const parsed = parsedTimetableMemory[userId.toString()];
+
+  if (!Array.isArray(parsed)) {
+    return res.status(400).send('⛔ 분석된 시간표 데이터가 없습니다.');
+  }
+
+  try {
+    const documents = parsed.map(entry => {
+      const [sh, sm] = entry.start.split(':').map(Number);
+      const [eh, em] = entry.end.split(':').map(Number);
+
+      return {
+        userId,
+        title: entry.title,
+        type: 'weekly',
+        start: new Date(2000, 0, 1, sh, sm),
+        end: new Date(2000, 0, 1, eh, em),
+        daysOfWeek: [entry.day],  // 1~7
+        tagIds: [],
+        createdAt: new Date()
+      };
+    });
+
+    await db.collection('schedules').insertMany(documents);
+    res.status(200).send('✅ 분석된 시간표를 DB에 저장 완료!');
+  } catch (err) {
+    console.error('❌ 시간표 저장 실패:', err);
+    res.status(500).send('서버 오류로 저장 실패');
+  }
+});
+
+
+
 // 그룹장 넘기기
 app.post("/groups/:groupId/transfer", async (req, res) => {
   if (!req.isAuthenticated()) {return res.status(401).json({ message: "로그인이 필요합니다." });}
