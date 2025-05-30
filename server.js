@@ -1046,6 +1046,50 @@ app.get('/schedules/form', (req, res) => {
   res.render('schedule-form.ejs');
 });
 
+//일정 수정
+app.put('/schedules/:scheduleId', async (req, res) => {
+  if (!req.user) return res.status(401).send('로그인이 필요합니다.');
+
+  const scheduleId = new ObjectId(req.params.scheduleId);
+  const userId = new ObjectId(req.user._id);
+  const { title, start, end, daysOfWeek, tagIds } = req.body;
+
+  try {
+    const schedule = await db.collection('schedules').findOne({ _id: scheduleId });
+    if (!schedule) return res.status(404).send('일정 없음');
+    if (schedule.userId.toString() !== userId.toString()) {
+      return res.status(403).send('본인 일정만 수정 가능');
+    }
+
+    const update = {
+      title,
+      tagIds: (tagIds || []).map(id => new ObjectId(id)),
+      updatedAt: new Date()
+    };
+
+    if (schedule.type === 'weekly') {
+      const [sh, sm] = start.split(':').map(Number);
+      const [eh, em] = end.split(':').map(Number);
+      update.start = new Date(2000, 0, 1, sh, sm);
+      update.end = new Date(2000, 0, 1, eh, em);
+      update.daysOfWeek = daysOfWeek.map(Number);
+    } else if (schedule.type === 'monthly') {
+      update.start = new Date(start); // ISO string ex) 2025-06-01T13:00
+      update.end = new Date(end);
+    }
+
+    await db.collection('schedules').updateOne(
+      { _id: scheduleId },
+      { $set: update }
+    );
+
+    res.status(200).json({ message: '일정 수정 완료' });
+  } catch (err) {
+    console.error('일정 수정 실패:', err);
+    res.status(500).send('서버 오류');
+  }
+});
+
 // 그룹 공유 태그 설정
 app.post('/groups/:groupId/share-tags', async (req, res) => {
   if (!req.user) return res.status(401).send('로그인 필요');

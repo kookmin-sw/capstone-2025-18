@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>일정 수정</title>
+</head>
+<body>
+  <h2>📅 일정 수정</h2>
+
+  <form action="/schedules/<%= schedule._id %>/edit" method="POST">
+    <label>제목: <input type="text" name="title" value="<%= schedule.title %>" required /></label><br/>
+
+    <% if (schedule.type === 'weekly') { %>
+      <label>시작시간: <input type="time" name="start" value="<%= schedule.start.toTimeString().slice(0,5) %>" required /></label><br/>
+      <label>종료시간: <input type="time" name="end" value="<%= schedule.end.toTimeString().slice(0,5) %>" required /></label><br/>
+      <label>요일 (쉼표 구분): <input type="text" name="daysOfWeek" value="<%= schedule.daysOfWeek.join(',') %>" required /></label><br/>
+    <% } else { %>
+      <label>시작일시: <input type="datetime-local" name="start" value="<%= schedule.start.toISOString().slice(0,16) %>" required /></label><br/>
+      <label>종료일시: <input type="datetime-local" name="end" value="<%= schedule.end.toISOString().slice(0,16) %>" required /></label><br/>
+    <% } %>
+
+    <button type="submit">수정 완료</button>
+  </form>
+</body>
+</html>
