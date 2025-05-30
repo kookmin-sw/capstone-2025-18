@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import LoginPopup from "./LoginPopup";
 
 export default function Profile({
@@ -10,13 +11,78 @@ export default function Profile({
   setShowProfilePopup, setProfileVisible,
   hasProfileImage, setHasProfileImage,
 }) {
+  
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/user/profile", {
+          credentials: "include"
+        });
+
+        console.log(nickname);
+        if (res.ok) {
+          const data = await res.json();
+          // setNickname(data.nickname);
+          if (data.profileImage) {
+            setSelectedImage(data.profileImage);
+            setHasProfileImage(true);
+          } else {
+            setSelectedImage(null);
+            setHasProfileImage(false);
+          }
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+        }
+      } catch (err) {
+        console.error("프로필 불러오기 실패:", err);
+        setIsLoggedIn(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const saveProfile = async () => {
+    // nickname = setNickname;
+    console.log(nickname);
+    try {
+      const res = await fetch("http://localhost:8080/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          nickname,
+          profileImage: hasProfileImage ? selectedImage : ""
+        })
+      });
+      if (res.ok) {
+        console.log("프로필이 저장되었습니다.");
+      } else {
+        console.error("프로필 저장 실패");
+      }
+    } catch (err) {
+      console.error("프로필 저장 실패:", err);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch("http://localhost:8080/logout", { method: "GET", credentials: "include" });
+    setNickname("");
+    setSelectedImage(null);
+    setHasProfileImage(false);
+    setIsLoggedIn(false);
+
+    router.push("/login");
+  };
 
   const handleLoginSuccess = () => {
     setShowLoginPopup(false);
-  };
-
-  const handleLoginFail = () => {
+    window.location.reload();
   };
 
   return (
@@ -63,7 +129,7 @@ export default function Profile({
                 alt="프로필"
               />
             ) : (
-              <span>{nickname}</span>
+              <span>{nickname?.charAt(0) || "?"}</span>
             )}
           </div>
           <button
@@ -82,7 +148,7 @@ export default function Profile({
             프로필 사진 지우기
           </button>
         </div>
-        
+
         <div className="flex flex-col gap-3 mb-4 px-2">
           <input
             type="text"
@@ -93,12 +159,29 @@ export default function Profile({
           />
 
           <button
-            onClick={() => setShowLoginPopup(true)}
+            onClick={saveProfile}
             className="btext-white py-2 rounded text-sm"
             style={{backgroundColor:'#E8A01D', borderRadius:'50px', color:'white'}}
           >
-            로그인
+            변경 사항 저장
           </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="group-btn"
+              style={{ borderRadius: "50px" }}
+            >
+              로그아웃
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowLoginPopup(true)}
+              className="group-btn"
+              style={{ borderRadius: "50px" }}
+            >
+              로그인
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useCallback } from "react";
 import moment from "moment";
 import EventModal from "./EventModal";
 import MiniCalendar from "./MiniCalendar";
@@ -11,11 +11,7 @@ const Calendar = () => {
   const [showModal, setShowModal] = useState(false);
   const [events, setEvents] = useState([]);
 
-  useEffect(() => {
-    generateCalendar();
-  }, [currentDate, events]);
-
-  const generateCalendar = () => {
+  const generateCalendar = useCallback(() => {
     const startOfMonth = currentDate.clone().startOf("month");
     const endOfMonth = currentDate.clone().endOf("month");
     const startDay = startOfMonth.day();
@@ -29,7 +25,12 @@ const Calendar = () => {
       days.push(i);
     }
     return days;
-  };
+  }, [currentDate]);
+
+
+  useEffect(() => {
+    generateCalendar();
+  }, [generateCalendar]);
 
   const prevMonth = () => {
     setCurrentDate(currentDate.clone().subtract(1, "month"));

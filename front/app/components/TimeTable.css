@@ -1,3 +1,7 @@
+::-webkit-scrollbar {
+    display: none;
+}
+
 .timetable-container {
   overflow-x: auto;
   padding: 6px;
@@ -76,11 +80,14 @@
 .timetable-scroll-wrapper {
   overflow-y: auto;
   max-height: calc(100vh - var(--header-height) - var(--tabbar-height) - 88px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .timetable-header-grid {
   display: grid;
-  grid-template-columns: 20px repeat(7, 40px);
+  grid-template-columns: 20px repeat(7, 37px);
   width: fit-content;
   background: #F9F4E9;
   border-bottom: 1px solid #ccc;
@@ -92,7 +99,7 @@
 
 .timetable-body-grid {
   display: grid;
-  grid-template-columns: 20px repeat(7, 40px);
+  grid-template-columns: 20px repeat(7, 37px);
   width: fit-content;
   flex-grow: 1;
   overflow-y: auto;
@@ -123,6 +130,20 @@
   font-weight: bold;
 }
 
+.time-cell-block {
+  flex: 1;
+  border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  position: relative;
+}
+.time-cell-block.unavailable {
+  background-color: #f0f0f0;
+}
+.time-cell-block.selected {
+  background-color: #e6f7ff;
+}
+
+
 .header-date {
   font-size: 11px;
   height: 20px;
@@ -133,9 +154,9 @@
 
 .cell {
   border: 1px solid #eee;
-  height: 45px;
   position: relative;
   cursor: pointer;
+  height: 30px;
 }
 
 .cell.selected {
@@ -144,17 +165,23 @@
 
 .event-block {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  padding: 1px 2px;
-  font-size: 10px;
-  color: white;
-  border-radius: 12px;
-  text-align: center;
+  left: 0;
+  width: 100%;
+  background-color: #91caff;
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-sizing: border-box;
   overflow: hidden;
-  z-index: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  z-index: 300;
+  /* pointer-events: none; */
 }
+
 
 .selected-date-circle {
   border: 1px solid black;
@@ -181,3 +208,31 @@
 .timetable-sunday {
   color: red;
 }
+
+.time-row {
+  display: flex;
+  height: 10px; /* 10분 단위 셀 */
+}
+
+.minute-cell {
+  flex: 1;
+  /* border-right: 1px solid #eee;
+  border-bottom: 1px solid #eee; */
+  position: relative;
+  height: 10px;
+  z-index: 36;
+}
+
+.minute-cell.unavailable {
+  background-color: #f0f0f0;
+}
+
+.minute-cell.selected {
+  background-color: #e6f7ff;
+}
+
+.hour-cell {
+  border: 1px solid #eee;
+  z-index: 0;
+}
+

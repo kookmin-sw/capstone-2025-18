@@ -127,16 +127,16 @@
 .settings-label {
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
 }
 
 .settings-input {
-  width: 100%;
+  width: 65%;
   padding: 0.5rem;
   font-size: 0.875rem;
   border: 1px solid #9ca3af;
   border-radius: 0.375rem;
-  margin-bottom: 0.75rem;
+  /* margin-bottom: 0.75rem; */
 }
 
 .settings-duration-selects {
@@ -146,7 +146,7 @@
 }
 
 .settings-duration-selects select {
-  width: 50%;
+  width: 65%;
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   border: 1px solid #9ca3af;
@@ -184,6 +184,7 @@
 .settings-btn.secondary {
   background-color: #adadad;
   color: #202020;
+  width: 85px;
 }
 
 
@@ -200,3 +201,29 @@
     justify-content: center;
     align-content: center;
 } */
+
+.tag-filter-buttons {
+  width: 100%;
+  display: flex;
+  justify-content: left;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* margin-top: 6px; */
+}
+
+.tag-option-btn {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: bold;
+  margin: 0;
+  min-width: 40px;
+  height: 30px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.tag-option-btn.selected {
+  outline: 1.5px solid #000;
+  opacity: 1;
+}
