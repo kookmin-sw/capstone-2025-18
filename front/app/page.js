@@ -58,11 +58,14 @@ export default function MainPage() {
 
   if (authenticated === null) return <p className="text-center p-8">로그인 상태 확인 중...</p>;
   if (!authenticated) return null;
-
+  const earIcon = `/icons/ear-header.png`;
   return (
     <div className="page-container">
       <div className="page-header">
+        <Image src={earIcon} alt="header" width={95} height={90} className="ear-left" />
         <h2>Tm:ta</h2>
+
+        <Image src={earIcon} alt="header" width={95} height={90} className="ear-right" />
       </div>
       <div className="page-content">{renderContent()}</div>
       <div className="page-tabbar">

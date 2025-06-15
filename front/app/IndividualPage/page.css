@@ -8,7 +8,7 @@
   }
   
   .group-container {
-    width: 320px;
+    /* width: 320px; */
     height: calc(100dvh - var(--header-height) - var(--tabbar-height));
     margin: 0 auto;
     background-color: #F9F4E9;
@@ -111,8 +111,8 @@
 .settings-popup-box {
   background-color: #F9F4E9;
   color: #202020;
-  padding: 1.25rem;
-  width: 320px;
+  padding: 20px;
+  width: 100vw;
   height: 100vh;
   z-index: 5000;
 }
@@ -143,6 +143,8 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  justify-content: space-between;
+  padding: 0 20px;
 }
 
 .settings-duration-selects select {
@@ -155,12 +157,13 @@
 }
 
 .settings-buttons {
-  /* display: flex;
-  flex-direction: column; */
+  display: flex;
+  /* flex-direction: column; */
+  justify-content: center;
+  align-items: center;
   gap: 0.5rem;
-  position: fixed;
   bottom: 2rem;
-  width: 320px;
+  width: calc(100vw - 40px);
 }
 
 .settings-btn {
@@ -183,7 +186,8 @@
 
 .settings-btn.secondary {
   background-color: #adadad;
-  color: #202020;
+  color: white;
+  font-weight: bold;
   width: 85px;
 }
 
@@ -192,38 +196,55 @@
     height: 31px;
 }
 
-/* .settings-header{
-    height: 60px;
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: row;
-    width: 320px;
-    justify-content: center;
-    align-content: center;
-} */
+.settings-share{
+    background-color: #F9F4E9;
+}
 
-.tag-filter-buttons {
+.settings-share-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-right: 20px;
+}
+
+.settings-tag-filter-buttons {
   width: 100%;
   display: flex;
   justify-content: left;
   flex-wrap: wrap;
-  gap: 6px;
+  /* gap: 10px; */
+  margin-bottom: 10px;
   /* margin-top: 6px; */
+  padding: 15px;
+}
+.settings-share-btn{
+  font-size: 13px;
+  border-radius: 10px;
+  background-color: #E8A01D;
+  padding: 4px 6px;
+  color: white;
+  font-weight: bold;
 }
 
-.tag-option-btn {
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 10px;
+.settings-tag-option-btn {
+  padding: 6px 6px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: bold;
   margin: 0;
-  min-width: 40px;
+  min-width: 50px;
   height: 30px;
   opacity: 0.6;
   transition: opacity 0.2s;
+  margin-right: 10px;
 }
 
-.tag-option-btn.selected {
+.settings-tag-option-btn.selected {
   outline: 1.5px solid #000;
   opacity: 1;
+}
+
+.settings-members-list{
+  min-height: 100px;
+  height: auto;
 }
